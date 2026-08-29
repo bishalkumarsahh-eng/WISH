@@ -56,3 +56,14 @@ Add the bot to your private logger group and set `LOG_GROUP_ID`. The bot logs su
 - Share Kit for published websites
 - Enhanced Website Manager controls
 - Inline-button-first experience plus /ultra and /analytics commands
+
+
+## ✨ Experience 2.0
+
+The Premium Story experience now includes a cinematic entry gate, journey progress, anonymous visitor interaction analytics, share/fullscreen/replay controls, photo lightbox, click spark effects, persistent reaction tracking, and a real MongoDB-backed guestbook with basic per-visitor throttling. Existing website fields and payment/publishing flow remain compatible.
+
+### New public APIs
+- `POST /api/site/{slug}/event` — chapter and interaction telemetry
+- `POST /api/site/{slug}/reaction` — reaction counters
+- `POST /api/site/{slug}/guestbook` — guestbook submissions
+- `GET /api/site/{slug}/public-stats` — public-safe aggregate counters
