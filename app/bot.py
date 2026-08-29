@@ -1005,37 +1005,112 @@ async def help_cmd(m):
     await m.answer("❓ <b>WishVerse Commands & Help</b>\n\nUse the buttons below for a clear guided experience.", reply_markup=kb([[InlineKeyboardButton(text="❓ Open Help", callback_data="help_menu")],[InlineKeyboardButton(text="📖 Creation Guide", callback_data="guide_menu")],[InlineKeyboardButton(text="🏠 Main Menu", callback_data="home")]]))
 
 @dp.message(Command("grantfree"))
-async def grantfree(m):
-    if not is_owner(m.from_user.id):
+async def grantfree(m: Message):
+    """Owner: /grantfree USER_ID or reply to a user's message with /grantfree."""
+    if not m.from_user or not is_owner(m.from_user.id):
         return await m.answer("⛔ Owner only command.")
-    parts = m.text.split()
-    if len(parts) != 2 or not parts[1].isdigit():
-        return await m.answer("Usage: /grantfree USER_ID")
-    uid = int(parts[1])
-    await db.users.update_one({"telegram_id": uid}, {"$set": {"free_access": True}}, upsert=True)
-    await m.answer(f"✅ Free permanent publishing granted to <code>{uid}</code>.")
-    await log_event(m.bot, f"👑 <b>FREE ACCESS GRANTED</b>\n👤 User ID: <code>{uid}</code>\n🛠 By owner: <code>{m.from_user.id}</code>")
+
+    uid = None
+    target_user = None
+    if m.reply_to_message and m.reply_to_message.from_user:
+        target_user = m.reply_to_message.from_user
+        uid = target_user.id
+    else:
+        parts = (m.text or "").split(maxsplit=1)
+        if len(parts) == 2 and parts[1].strip().isdigit():
+            uid = int(parts[1].strip())
+
+    if not uid:
+        return await m.answer(
+            "⚠️ <b>How to grant free publishing</b>\n\n"
+            "• Reply to a user's message and send <code>/grantfree</code>\n"
+            "OR\n"
+            "• Send <code>/grantfree USER_ID</code>\n\n"
+            "Example: <code>/grantfree 123456789</code>"
+        )
+
+    now = datetime.now(timezone.utc)
+    update = {
+        "$set": {"free_access": True, "free_access_granted_at": now, "free_access_granted_by": m.from_user.id},
+        "$setOnInsert": {"telegram_id": uid, "created_at": now},
+    }
+    if target_user:
+        update["$set"].update({
+            "username": target_user.username or None,
+            "full_name": target_user.full_name or None,
+        })
+    await db.users.update_one({"telegram_id": uid}, update, upsert=True)
+
+    name = target_user.full_name if target_user else None
+    label = f"<b>{name}</b> (<code>{uid}</code>)" if name else f"<code>{uid}</code>"
+    await m.answer(
+        "✅ <b>Free publishing granted!</b>\n\n"
+        f"👤 User: {label}\n"
+        "🌐 Normal websites: <b>FREE</b>\n"
+        "💎 Premium websites: <b>FREE</b>\n"
+        "♾ Access: <b>Permanent until revoked</b>"
+    )
+    await log_event(m.bot, "👑 <b>FREE ACCESS GRANTED</b>\n" + user_log_details(target_user) + f"\n🛠 Granted by owner: <code>{m.from_user.id}</code>" if target_user else f"👑 <b>FREE ACCESS GRANTED</b>\n👤 User ID: <code>{uid}</code>\n🛠 Granted by owner: <code>{m.from_user.id}</code>")
+
 
 @dp.message(Command("revokefree"))
-async def revokefree(m):
-    if not is_owner(m.from_user.id):
+async def revokefree(m: Message):
+    """Owner: /revokefree USER_ID or reply to a user's message with /revokefree."""
+    if not m.from_user or not is_owner(m.from_user.id):
         return await m.answer("⛔ Owner only command.")
-    parts = m.text.split()
-    if len(parts) != 2 or not parts[1].isdigit():
-        return await m.answer("Usage: /revokefree USER_ID")
-    uid = int(parts[1])
-    await db.users.update_one({"telegram_id": uid}, {"$set": {"free_access": False}}, upsert=True)
-    await m.answer(f"❌ Free publishing removed from <code>{uid}</code>.")
-    await log_event(m.bot, f"🚫 <b>FREE ACCESS REVOKED</b>\n👤 User ID: <code>{uid}</code>\n🛠 By owner: <code>{m.from_user.id}</code>")
+
+    uid = None
+    target_user = None
+    if m.reply_to_message and m.reply_to_message.from_user:
+        target_user = m.reply_to_message.from_user
+        uid = target_user.id
+    else:
+        parts = (m.text or "").split(maxsplit=1)
+        if len(parts) == 2 and parts[1].strip().isdigit():
+            uid = int(parts[1].strip())
+
+    if not uid:
+        return await m.answer(
+            "⚠️ <b>How to revoke free publishing</b>\n\n"
+            "• Reply to the user's message with <code>/revokefree</code>\n"
+            "OR\n"
+            "• Send <code>/revokefree USER_ID</code>"
+        )
+
+    existing = await db.users.find_one({"telegram_id": uid})
+    if not existing or not existing.get("free_access"):
+        return await m.answer(f"ℹ️ <code>{uid}</code> does not currently have free publishing access.")
+
+    await db.users.update_one(
+        {"telegram_id": uid},
+        {"$set": {"free_access": False, "free_access_revoked_at": datetime.now(timezone.utc), "free_access_revoked_by": m.from_user.id}},
+    )
+    name = target_user.full_name if target_user else existing.get("full_name")
+    label = f"<b>{name}</b> (<code>{uid}</code>)" if name else f"<code>{uid}</code>"
+    await m.answer(f"❌ <b>Free publishing revoked.</b>\n\n👤 User: {label}\n💳 Future publishing will require Telegram Stars.")
+    await log_event(m.bot, f"🚫 <b>FREE ACCESS REVOKED</b>\n👤 User ID: <code>{uid}</code>\n🛠 Revoked by owner: <code>{m.from_user.id}</code>")
+
 
 @dp.message(Command("freeusers"))
-async def freeusers(m):
-    if not is_owner(m.from_user.id):
+async def freeusers(m: Message):
+    if not m.from_user or not is_owner(m.from_user.id):
         return await m.answer("⛔ Owner only command.")
-    docs = await db.users.find({"free_access": True}).limit(50).to_list(length=50)
+
+    docs = await db.users.find({"free_access": True}).sort("free_access_granted_at", -1).to_list(length=200)
     if not docs:
-        return await m.answer("No users currently have free publishing access.")
-    text = "👑 <b>Free Publishing Users</b>\n\n" + "\n".join(f"• <code>{d.get('telegram_id')}</code>" for d in docs)
+        return await m.answer("👑 <b>Free Publishing Users</b>\n\nNo users currently have free publishing access.")
+
+    lines = []
+    for i, d in enumerate(docs, 1):
+        name = d.get("full_name") or "Unknown user"
+        username = f"@{d['username']}" if d.get("username") else "No username"
+        lines.append(f"{i}. <b>{name}</b>\n   🔗 {username}\n   🆔 <code>{d.get('telegram_id')}</code>")
+
+    header = f"👑 <b>Free Publishing Users</b>\n\nTotal: <b>{len(docs)}</b>\n\n"
+    text = header + "\n\n".join(lines)
+    # Telegram message limit protection.
+    if len(text) > 4000:
+        text = text[:3900] + f"\n\n… Showing first users. Total: {len(docs)}"
     await m.answer(text)
 
 async def run_bot():
