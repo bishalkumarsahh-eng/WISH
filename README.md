@@ -1,18 +1,4 @@
-# WishVerse — Telegram Website Maker
-
-Create birthday, valentine, anniversary and custom wish websites from Telegram.
-
-## Features
-- Telegram bot creation flow with inline buttons
-- Birthday, Valentine, Anniversary, Friendship, Congratulations, Surprise and Custom types
-- Static image, gradient and live animated backgrounds
-- Custom title/message and photo uploads
-- Dynamic website pages with unique slugs
-- Preview and publish flow
-- Telegram Stars invoices (XTR)
-- Owner free-access whitelist
-- MongoDB
-- Heroku-ready FastAPI deployment
+# WishVerse — Fixed Heroku Version
 
 ## Heroku Config Vars
 BOT_TOKEN
@@ -21,13 +7,12 @@ MONGO_URI
 BASE_URL
 SECRET_KEY
 
-## Commands
-/start — open creator
-/mywebsites — manage your websites
-/admin — owner panel
-/grantfree USER_ID — grant unlimited free publishing
-/revokefree USER_ID — remove free access
+## Dynos
+Scale exactly:
+- web = 1
+- worker = 1
 
-## Important
-Telegram Stars payment code validates pre-checkout and only publishes after a successful_payment update.
-For production, configure MongoDB Atlas network access and use a persistent media storage service for large files.
+The web dyno serves websites only.
+The worker dyno runs Telegram polling only.
+
+Do not run the same BOT_TOKEN on another Heroku app, Railway, Replit, Render, or local computer.
