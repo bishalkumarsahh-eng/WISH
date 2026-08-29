@@ -161,6 +161,26 @@ def render_site(site, preview=False, preview_token=None):
     rain = "<div class='rain'></div>" if "rain" in effect else ""
     particles = "<div class='particles'></div>" if ("particles" in effect or "gold" in effect or "lights" in effect) else ""
 
+    premium_html = ""
+    if site.get("package") == "premium":
+        premium_html = """
+<section class="section premium-journey">
+  <div class="chapter-nav"><span>01 · Welcome</span><span>02 · Memories</span><span>03 · Surprise</span><span>04 · Finale</span></div>
+  <div class="interactive-grid">
+    <div class="interactive-card" onclick="this.querySelector('.hidden-reveal').style.display='block'">🎁<br><b>Open a Surprise</b><div class="hidden-reveal">You are more special than words can explain ✨</div></div>
+    <div class="interactive-card" onclick="this.querySelector('.hidden-reveal').style.display='block'">💌<br><b>Open My Letter</b><div class="hidden-reveal">A special message was waiting for you ❤️</div></div>
+    <div class="interactive-card" onclick="this.querySelector('.hidden-reveal').style.display='block'">🕯️<br><b>Make a Wish</b><div class="hidden-reveal">Close your eyes and make your best wish 🌟</div></div>
+  </div>
+  <div class="star-field">
+    <span class="star" style="left:12%;top:25%" onclick="this.innerHTML='💖'">✦</span>
+    <span class="star" style="left:42%;top:55%" onclick="this.innerHTML='🎁'">✦</span>
+    <span class="star" style="left:70%;top:18%" onclick="this.innerHTML='✨'">✦</span>
+    <span class="star" style="left:82%;top:70%" onclick="this.innerHTML='❤️'">✦</span>
+  </div>
+  <div class="cinematic-final"><h2>One Last Thing... ❤️</h2><p>Thank you for being part of this beautiful story.</p><button onclick="this.innerHTML='🎆 Surprise Unlocked! 🎆';document.body.classList.add('celebrate')">Click for the Final Surprise</button></div>
+</section>
+"""
+
     return HTMLResponse(f"""<!doctype html>
 <html><head>
 <meta charset='utf-8'>
@@ -220,23 +240,7 @@ h1{{font-family:var(--titlefont);margin:8px 0 18px;font-size:clamp(2.5rem,9vw,6.
 {preview_banner}{particles}{stars}{hearts}{lanterns}{rain}{fireworks}
 <div class='wrap'><main class='card'>{recipient}<h1>{title}</h1><div class='message'>{message}</div>{photo_html}{video_html}{surprise_html}<div class='badge'>✨ Created with WishVerse ✨</div></main></div>
 <script>function revealSurprise(b){{b.parentElement.classList.toggle('open');b.textContent=b.parentElement.classList.contains('open')?'✨ Surprise Revealed!':'🎁 Click Here to Reveal Your Surprise'}}function openLetter(b){{b.parentElement.classList.toggle('open');b.textContent=b.parentElement.classList.contains('open')?'💖 Letter Opened':'💌 Open My Secret Letter'}}function celebrate(){{for(let i=0;i<90;i++){{let e=document.createElement('i');e.className='confetti-piece';e.style.left=Math.random()*100+'vw';e.style.transform='rotate('+Math.random()*360+'deg)';e.style.animationDelay=Math.random()*0.7+'s';e.style.background='hsl('+Math.random()*360+' 90% 65%)';document.body.appendChild(e);setTimeout(()=>e.remove(),4500)}}}}</script>
-{% if site.get("package") == "premium" %}
-<section class="section premium-journey">
-  <div class="chapter-nav"><span>01 · Welcome</span><span>02 · Memories</span><span>03 · Surprise</span><span>04 · Finale</span></div>
-  <div class="interactive-grid">
-    <div class="interactive-card" onclick="this.querySelector('.hidden-reveal').style.display='block'">🎁<br><b>Open a Surprise</b><div class="hidden-reveal">You are more special than words can explain ✨</div></div>
-    <div class="interactive-card" onclick="this.querySelector('.hidden-reveal').style.display='block'">💌<br><b>Open My Letter</b><div class="hidden-reveal">A special message was waiting for you ❤️</div></div>
-    <div class="interactive-card" onclick="this.querySelector('.hidden-reveal').style.display='block'">🕯️<br><b>Make a Wish</b><div class="hidden-reveal">Close your eyes and make your best wish 🌟</div></div>
-  </div>
-  <div class="star-field">
-    <span class="star" style="left:12%;top:25%" onclick="this.innerHTML='💖'">✦</span>
-    <span class="star" style="left:42%;top:55%" onclick="this.innerHTML='🎁'">✦</span>
-    <span class="star" style="left:70%;top:18%" onclick="this.innerHTML='✨'">✦</span>
-    <span class="star" style="left:82%;top:70%" onclick="this.innerHTML='❤️'">✦</span>
-  </div>
-  <div class="cinematic-final"><h2>One Last Thing... ❤️</h2><p>Thank you for being part of this beautiful story.</p><button onclick="this.innerHTML='🎆 Surprise Unlocked! 🎆';document.body.classList.add('celebrate')">Click for the Final Surprise</button></div>
-</section>
-{% endif %}
+{premium_html}
 
 </body></html>""")
 
