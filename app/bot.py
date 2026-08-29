@@ -13,7 +13,7 @@ from aiogram.types import (
 
 from .config import BOT_TOKEN, OWNER_ID, BASE_URL, PREVIEW_MINUTES
 from .db import db, setup_indexes
-from .themes import THEMES, PREMIUM_THEMES
+from .themes import THEMES, PREMIUM_THEME_CONFIG
 
 log = logging.getLogger(__name__)
 dp = Dispatcher()
@@ -125,13 +125,11 @@ def finish_photos_menu():
     return kb([[InlineKeyboardButton(text="✅ Done Adding Photos", callback_data="media:photos_done")]])
 
 def premium_theme_menu(category):
-    # Show premium themes made for the selected occasion, plus universal themes.
-    items = [(key, value) for key, value in PREMIUM_THEMES.items()
-             if value.get("category") in (category, "all")]
+    items = [(key, value) for key, value in PREMIUM_THEME_CONFIG.items() if value["category"] == category]
     rows = []
     for i in range(0, len(items), 2):
         rows.append([InlineKeyboardButton(text=v["name"], callback_data=f"ptheme:{k}") for k, v in items[i:i+2]])
-    rows.append([InlineKeyboardButton(text="🔙 Change Package", callback_data="categories")])
+    rows.append([InlineKeyboardButton(text="🔙 Choose Package", callback_data="categories")])
     return kb(rows)
 
 def normal_extras_menu():
@@ -226,11 +224,12 @@ async def categories(c):
 @dp.callback_query(F.data.startswith("cat:"))
 async def choose_category(c):
     cat = c.data.split(":", 1)[1]
-    await save_draft(c.from_user.id, {"type": cat, "step": "theme"})
+    await save_draft(c.from_user.id, {"type": cat, "step": "package"})
     await c.message.edit_text(
-        "🎨 <b>Choose a beautiful theme</b>\n\n"
-        "Some themes are live animated, while others are elegant static designs.",
-        reply_markup=theme_menu(0)
+        "📦 <b>Choose how you want to create this website</b>\n\n"
+        "✨ <b>Normal</b> — a beautiful single-page wish, up to 4 photos, fonts and interactive extras.\n\n"
+        "💎 <b>Premium Story Experience</b> — a full interactive journey like the birthday website you shared: intro → choices → surprise → letter → memories → video → finale.",
+        reply_markup=package_menu()
     )
     await c.answer()
 
@@ -245,20 +244,16 @@ async def choose_premium_theme(c):
     draft = await get_draft(c.from_user.id)
     if not draft or draft.get("step") != "premium_theme":
         return await c.answer("Please start again.", show_alert=True)
-
     theme = c.data.split(":", 1)[1]
-    premium = PREMIUM_THEMES.get(theme)
-    if not premium:
+    info = PREMIUM_THEME_CONFIG.get(theme)
+    if not info:
         return await c.answer("Premium theme not found.", show_alert=True)
     draft["premium_theme"] = theme
     draft["theme"] = theme
-    draft["step"] = "title"
+    draft["step"] = "recipient"
     await save_draft(c.from_user.id, draft)
-
     await c.message.edit_text(
-        f"✨ <b>{premium['name']}</b> selected!\n\n"
-        "This premium website will be built as an interactive journey with cinematic sections.\n\n"
-        "✍️ Now send the <b>main title</b>."
+        f"💎 <b>{info['name']}</b> selected!\n\nYour Premium website will be a complete interactive journey.\n\nNow send the <b>recipient's name</b>, or send <code>skip</code>."
     )
     await c.answer()
 
@@ -287,33 +282,21 @@ async def choose_package(c):
     if not draft:
         return await c.answer("Please start creating again.", show_alert=True)
     draft["package"] = package
-    if package == "premium":
-        draft["step"] = "premium_theme"
+    if package == "simple":
+        draft["step"] = "theme"
         await save_draft(c.from_user.id, draft)
         await c.message.edit_text(
-            "💎 <b>Choose your Premium Cinematic Theme</b>\n\n"
-            "These themes are built specially for this occasion and will create a complete interactive journey.",
-            reply_markup=premium_theme_menu(draft.get("type", "custom"))
-        )
-        return await c.answer()
-
-    draft["step"] = "title_font"
-    await save_draft(c.from_user.id, draft)
-
-    if package == "simple":
-        text = (
-            "✨ <b>Normal Package selected</b>\n\n"
-            "Includes: beautiful theme + professional layout + up to 4 photos + separate title/message fonts "
-            "+ one surprise experience + one secret message + celebration effect.\n"
-            "Publishing: 25⭐ / 50⭐ / 100⭐"
+            "✨ <b>Normal Website selected</b>\n\nChoose the background theme. After that you will add the name, title, message, fonts and up to 4 photos.",
+            reply_markup=theme_menu(0)
         )
     else:
-        text = (
-            "💎 <b>Premium Package selected</b>\n\n"
-            "Includes: premium theme + up to 8 photos + 1 video + premium font choices.\n"
-            "Publishing: 50⭐ / 100⭐ / 200⭐"
+        draft["step"] = "premium_theme"
+        await save_draft(c.from_user.id, draft)
+        category = draft.get("type", "custom")
+        await c.message.edit_text(
+            "💎 <b>Premium Story Experience selected</b>\n\nNow choose the complete story theme for your occasion. Every Premium theme uses the interactive multi-screen style inspired by the birthday website you sent.",
+            reply_markup=premium_theme_menu(category)
         )
-    await c.message.edit_text(text + "\n\n🔤 Choose your website font:", reply_markup=font_menu(package))
     await c.answer()
 
 @dp.callback_query(F.data.startswith("font:"))
@@ -503,14 +486,9 @@ async def collect(m):
 
     if step == "message":
         draft["message"] = m.text[:5000]
-        draft["step"] = "package"
+        draft["step"] = "title_font"
         await save_draft(m.from_user.id, draft)
-        return await m.answer(
-            "📦 <b>Choose your website package</b>\n\n"
-            "✨ <b>Normal:</b> up to 4 photos, separate fonts, surprise reveal, secret message and celebration effect.\n"
-            "💎 <b>Premium:</b> up to 8 photos, 1 video, premium fonts and multiple interactive experiences.",
-            reply_markup=package_menu()
-        )
+        return await m.answer("🔤 Choose the <b>title font</b> for your website:", reply_markup=font_menu(draft.get("package", "simple"), "title"))
 
     if step == "media" and m.text.strip().lower() == "skip":
         if draft.get("package") == "simple":
