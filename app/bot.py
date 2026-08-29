@@ -45,6 +45,67 @@ def as_utc(value):
 def kb(rows):
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
+def home_menu():
+    return kb([
+        [InlineKeyboardButton(text="➕ Create a Wish Website", callback_data="categories")],
+        [InlineKeyboardButton(text="⚡ Quick Templates", callback_data="templates_menu"), InlineKeyboardButton(text="🧠 Creator Studio", callback_data="studio_menu")],
+        [InlineKeyboardButton(text="🏠 My Websites", callback_data="mywebsites"), InlineKeyboardButton(text="📊 Dashboard", callback_data="dashboard_menu")],
+        [InlineKeyboardButton(text="🧭 Creation Progress", callback_data="progress_menu"), InlineKeyboardButton(text="📖 Creation Guide", callback_data="guide_menu")],
+        [InlineKeyboardButton(text="📚 Ideas & Examples", callback_data="ideas_menu"), InlineKeyboardButton(text="❓ Commands & Help", callback_data="help_menu")],
+        [InlineKeyboardButton(text="🧱 Experience Builder", callback_data="v8_builder"), InlineKeyboardButton(text="🚀 Ultra Creator Lab", callback_data="ultra_lab")],
+        [InlineKeyboardButton(text="📈 Live Analytics", callback_data="analytics_menu")]
+    ])
+
+
+
+
+
+def studio_menu():
+    return kb([
+        [InlineKeyboardButton(text="🧩 Start from Template", callback_data="templates_menu"), InlineKeyboardButton(text="🎨 Build from Scratch", callback_data="categories")],
+        [InlineKeyboardButton(text="💡 Design Ideas", callback_data="ideas_menu"), InlineKeyboardButton(text="🧭 Creation Guide", callback_data="guide_menu")],
+        [InlineKeyboardButton(text="📊 My Dashboard", callback_data="dashboard_menu"), InlineKeyboardButton(text="🏠 My Websites", callback_data="mywebsites")],
+        [InlineKeyboardButton(text="🏠 Main Menu", callback_data="home")]
+    ])
+
+def ideas_menu():
+    return kb([
+        [InlineKeyboardButton(text="🎂 Birthday Ideas", callback_data="idea:birthday"), InlineKeyboardButton(text="❤️ Valentine Ideas", callback_data="idea:valentine")],
+        [InlineKeyboardButton(text="💍 Anniversary Ideas", callback_data="idea:anniversary"), InlineKeyboardButton(text="🎁 Surprise Ideas", callback_data="idea:surprise")],
+        [InlineKeyboardButton(text="🌸 Aesthetic Styles", callback_data="idea:aesthetic"), InlineKeyboardButton(text="🏠 Main Menu", callback_data="home")]
+    ])
+
+def template_menu():
+    return kb([
+        [InlineKeyboardButton(text="🎂 Birthday Luxury", callback_data="template:birthday_luxury"), InlineKeyboardButton(text="❤️ Romantic Valentine", callback_data="template:valentine_romance")],
+        [InlineKeyboardButton(text="💍 Anniversary Story", callback_data="template:anniversary_story"), InlineKeyboardButton(text="🎁 Mystery Surprise", callback_data="template:surprise_mystery")],
+        [InlineKeyboardButton(text="🌸 Pink Flower Wish", callback_data="template:pink_flower"), InlineKeyboardButton(text="🌌 Night Universe", callback_data="template:night_universe")],
+        [InlineKeyboardButton(text="🏠 Main Menu", callback_data="home")]
+    ])
+
+TEMPLATE_PRESETS = {
+    "birthday_luxury": {"type":"birthday","package":"premium","theme":"birthday_luxury","opening_style":"gift","title_font":"great_vibes","message_font":"cormorant","extras":["reveal","confetti","countdown","timeline"]},
+    "valentine_romance": {"type":"valentine","package":"premium","theme":"valentine_rose","opening_style":"envelope","title_font":"great_vibes","message_font":"playfair","extras":["letter","lovemeter","reactions"]},
+    "anniversary_story": {"type":"anniversary","package":"premium","theme":"anniversary_luxury","opening_style":"cinematic","title_font":"cinzel","message_font":"cormorant","extras":["timeline","letter","guestbook"]},
+    "surprise_mystery": {"type":"surprise","package":"premium","theme":"surprise_magic","opening_style":"portal","title_font":"cinzel","message_font":"inter","extras":["reveal","confetti"]},
+    "pink_flower": {"type":"custom","package":"simple","theme":"flower_garden","opening_style":"flower","title_font":"playfair","message_font":"poppins","extras":["reveal","confetti"]},
+    "night_universe": {"type":"custom","package":"simple","theme":"starry_night","opening_style":"elegant","title_font":"merriweather","message_font":"inter","extras":["countdown"]},
+}
+
+def draft_progress_text(draft):
+    if not draft:
+        return "🧭 <b>No creation in progress</b>\n\nStart a new website and this screen will show your progress."
+    steps=[("type","Occasion"),("package","Package"),("theme","Theme"),("opening_style","Opening"),("recipient_name","Recipient"),("title","Title"),("message","Message"),("title_font","Title Font"),("message_font","Message Font")]
+    done=sum(1 for key,_ in steps if draft.get(key))
+    return "🧭 <b>Creation Progress</b>\n\n" + "\n".join(f"{'✅' if draft.get(k) else '⬜'} {name}" for k,name in steps) + f"\n\n<b>{done}/{len(steps)} main steps completed</b>\nCurrent step: <code>{draft.get('step','starting')}</code>"
+def guide_menu():
+    return kb([
+        [InlineKeyboardButton(text="1️⃣ Choose Occasion", callback_data="guide:occasion"), InlineKeyboardButton(text="2️⃣ Normal vs Premium", callback_data="guide:package")],
+        [InlineKeyboardButton(text="3️⃣ Themes & Entrance", callback_data="guide:theme"), InlineKeyboardButton(text="4️⃣ Text & Fonts", callback_data="guide:text")],
+        [InlineKeyboardButton(text="5️⃣ Extras & Media", callback_data="guide:extras"), InlineKeyboardButton(text="6️⃣ Preview & Publish", callback_data="guide:publish")],
+        [InlineKeyboardButton(text="🏠 Main Menu", callback_data="home")]
+    ])
+
 SIMPLE_FONTS = {
     "inter": ("✨ Modern Sans", "Inter"),
     "playfair": ("🌹 Elegant Serif", "Playfair Display"),
@@ -101,7 +162,8 @@ def category_menu():
         [InlineKeyboardButton(text="💍 Anniversary", callback_data="cat:anniversary"), InlineKeyboardButton(text="👫 Friendship", callback_data="cat:friendship")],
         [InlineKeyboardButton(text="🎉 Congratulations", callback_data="cat:congratulations"), InlineKeyboardButton(text="🎁 Surprise", callback_data="cat:surprise")],
         [InlineKeyboardButton(text="✨ Festival", callback_data="cat:festival"), InlineKeyboardButton(text="🌟 Custom", callback_data="cat:custom")],
-        [InlineKeyboardButton(text="🏠 My Websites", callback_data="mywebsites")]
+        [InlineKeyboardButton(text="🏠 My Websites", callback_data="mywebsites"), InlineKeyboardButton(text="📊 Dashboard", callback_data="dashboard_menu")],
+        [InlineKeyboardButton(text="➕ Create Website", callback_data="categories"), InlineKeyboardButton(text="❓ Help & Guide", callback_data="help_menu")]
     ])
 
 def theme_menu(page=0):
@@ -125,6 +187,19 @@ def package_menu():
     return kb([
         [InlineKeyboardButton(text="✨ Normal — Up to 4 Photos", callback_data="package:simple")],
         [InlineKeyboardButton(text="💎 Premium — Photos + Video", callback_data="package:premium")],
+    ])
+
+def opening_style_menu(package):
+    if package == "premium":
+        return kb([
+            [InlineKeyboardButton(text="💌 Envelope Reveal", callback_data="opening:envelope"), InlineKeyboardButton(text="🎁 Gift Box", callback_data="opening:gift")],
+            [InlineKeyboardButton(text="🌸 Flower Bloom", callback_data="opening:flower"), InlineKeyboardButton(text="🎬 Cinematic Start", callback_data="opening:cinematic")],
+            [InlineKeyboardButton(text="🪄 Magic Portal", callback_data="opening:portal"), InlineKeyboardButton(text="👑 Luxury Entrance", callback_data="opening:luxury")],
+            [InlineKeyboardButton(text="⚡ Neon Tap", callback_data="opening:neon"), InlineKeyboardButton(text="🕹 Arcade Start", callback_data="opening:arcade")],
+        ])
+    return kb([
+        [InlineKeyboardButton(text="✨ Elegant Open", callback_data="opening:elegant"), InlineKeyboardButton(text="🎁 Gift Reveal", callback_data="opening:gift")],
+        [InlineKeyboardButton(text="💌 Love Letter", callback_data="opening:envelope"), InlineKeyboardButton(text="🌸 Flower Bloom", callback_data="opening:flower")],
     ])
 
 def font_menu(package, kind="title"):
@@ -151,14 +226,16 @@ def normal_extras_menu():
         [InlineKeyboardButton(text="🎁 Reveal Surprise", callback_data="extra:reveal")],
         [InlineKeyboardButton(text="💌 Secret Message", callback_data="extra:letter")],
         [InlineKeyboardButton(text="🎉 Celebration Effect", callback_data="extra:confetti")],
+        [InlineKeyboardButton(text="⏳ Live Countdown", callback_data="extra:countdown")],
         [InlineKeyboardButton(text="✨ Continue to Photos", callback_data="extra:done")],
     ])
 
 def premium_extras_menu():
     return kb([
-        [InlineKeyboardButton(text="🎁 Click to Reveal Surprise", callback_data="extra:reveal")],
-        [InlineKeyboardButton(text="💌 Secret Letter", callback_data="extra:letter")],
-        [InlineKeyboardButton(text="🎉 Confetti Celebration", callback_data="extra:confetti")],
+        [InlineKeyboardButton(text="🎁 Click to Reveal Surprise", callback_data="extra:reveal"), InlineKeyboardButton(text="💌 Secret Letter", callback_data="extra:letter")],
+        [InlineKeyboardButton(text="🎉 Confetti Celebration", callback_data="extra:confetti"), InlineKeyboardButton(text="⏳ Live Countdown", callback_data="extra:countdown")],
+        [InlineKeyboardButton(text="🕰 Memory Timeline", callback_data="extra:timeline"), InlineKeyboardButton(text="💞 Love Meter", callback_data="extra:lovemeter")],
+        [InlineKeyboardButton(text="👏 Reaction Wall", callback_data="extra:reactions"), InlineKeyboardButton(text="💬 Guestbook", callback_data="extra:guestbook")],
         [InlineKeyboardButton(text="✨ Finish Extras", callback_data="extra:done")],
     ])
 
@@ -181,6 +258,8 @@ async def create_site_from_draft(message, draft):
         "owner_id": message.from_user.id,
         "type": draft.get("type"),
         "theme": draft.get("theme", "starry_night"),
+        "opening_style": draft.get("opening_style", "elegant"),
+        "views": 0,
         "recipient_name": draft.get("recipient_name", ""),
         "title": draft.get("title", ""),
         "message": draft.get("message", ""),
@@ -188,6 +267,8 @@ async def create_site_from_draft(message, draft):
         "title_font": draft.get("title_font", "great_vibes" if draft.get("package") == "premium" else "playfair"),
         "message_font": draft.get("message_font", "inter"),
         "extras": draft.get("extras", []),
+        "event_date": draft.get("event_date"),
+        "reactions": {},
         "surprise_text": draft.get("surprise_text", "A special surprise just for you! ✨"),
         "letter_text": draft.get("letter_text", "You mean more to me than words can say. 💖"),
         "photo_file_ids": draft.get("photo_file_ids", []),
@@ -219,12 +300,114 @@ async def create_site_from_draft(message, draft):
 
 @dp.message(CommandStart())
 async def start(m):
+    await log_event(m.bot, "🚀 <b>BOT STARTED BY USER</b>\n\n" + user_log_details(m.from_user) + f"\n🕒 Time: <code>{datetime.now(timezone.utc).strftime('%d %b %Y • %H:%M UTC')}</code>")
     await m.answer(
-        "✨ <b>Welcome to WishVerse Premium</b>\n\n"
-        "Create a professional animated wish website with premium themes, photos, video, and beautiful fonts.\n\n"
-        "Choose your occasion:",
-        reply_markup=category_menu()
+        "✨ <b>Welcome to WishVerse</b>\n\n"
+        "Create beautiful interactive Birthday, Valentine, Anniversary, Friendship and Surprise websites directly from Telegram.\n\n"
+        "Everything is guided step-by-step with buttons. Tap <b>Create a Wish Website</b> to begin.",
+        reply_markup=home_menu()
     )
+
+
+
+@dp.callback_query(F.data == "studio_menu")
+async def studio_menu_cb(c):
+    await c.answer()
+    await c.message.edit_text("🧠 <b>Creator Studio</b>\n\nChoose how you want to build your experience. Templates are fast; scratch gives you full control.", reply_markup=studio_menu())
+
+@dp.callback_query(F.data == "ideas_menu")
+async def ideas_menu_cb(c):
+    await c.answer()
+    await c.message.edit_text("📚 <b>Wish Ideas & Inspiration</b>\n\nTap an occasion for design ideas, recommended opening styles and interactive features.", reply_markup=ideas_menu())
+
+@dp.callback_query(F.data.startswith("idea:"))
+async def idea_cb(c):
+    await c.answer()
+    key=c.data.split(":",1)[1]
+    ideas={
+      "birthday":"🎂 <b>Birthday</b>\nGift Box opening → Countdown → Photo memories → Confetti → Guestbook.",
+      "valentine":"❤️ <b>Valentine</b>\nEnvelope opening → Secret Letter → Love Meter → Rose theme → Memory timeline.",
+      "anniversary":"💍 <b>Anniversary</b>\nCinematic opening → Timeline → Photo story → Luxury typography → Guestbook.",
+      "surprise":"🎁 <b>Surprise</b>\nMystery opening → Click-to-Reveal → Confetti → Video moment → Secret message.",
+      "aesthetic":"🌸 <b>Aesthetic</b>\nTry Garden, Neon, Luxury, Scrapbook, Postcard, Night Universe or Cinematic styles."
+    }
+    await c.message.edit_text(ideas.get(key,"💡 Choose an idea."), reply_markup=kb([[InlineKeyboardButton(text="⚡ Use a Template", callback_data="templates_menu")],[InlineKeyboardButton(text="🎨 Create Now", callback_data="categories")],[InlineKeyboardButton(text="🔙 Ideas", callback_data="ideas_menu")]]))
+
+@dp.callback_query(F.data == "home")
+async def home(c):
+    await c.message.edit_text("🏠 <b>WishVerse Main Menu</b>\n\nCreate, manage and track your wish websites from here.", reply_markup=home_menu())
+    await c.answer()
+
+@dp.callback_query(F.data == "templates_menu")
+async def templates_menu_cb(c):
+    await c.message.edit_text("⚡ <b>Quick Templates</b>\n\nChoose a professionally prepared starting style. You can still customize the recipient, title, message, media and other details.", reply_markup=template_menu())
+    await c.answer()
+
+@dp.callback_query(F.data.startswith("template:"))
+async def template_choose(c):
+    key=c.data.split(":",1)[1]
+    preset=TEMPLATE_PRESETS.get(key)
+    if not preset:
+        return await c.answer("Template not found.", show_alert=True)
+    draft=dict(preset)
+    draft["step"]="recipient"
+    await save_draft(c.from_user.id, draft)
+    await c.message.edit_text("⚡ <b>Template loaded!</b>\n\nThe occasion, package, visual style, opening and starter features are ready.\n\nNow send the <b>recipient's name</b>, or send <code>skip</code>.")
+    await c.answer("Template ready!")
+
+@dp.callback_query(F.data == "progress_menu")
+async def progress_menu_cb(c):
+    draft=await get_draft(c.from_user.id)
+    rows=[[InlineKeyboardButton(text="➕ Start / Restart Creation", callback_data="categories")],[InlineKeyboardButton(text="⚡ Use Template", callback_data="templates_menu")],[InlineKeyboardButton(text="🏠 Main Menu", callback_data="home")]]
+    await c.message.edit_text(draft_progress_text(draft), reply_markup=kb(rows))
+    await c.answer()
+
+@dp.callback_query(F.data == "help_menu")
+async def help_menu_cb(c):
+    await c.message.edit_text(
+        "❓ <b>WishVerse Help</b>\n\n"
+        "<b>Main commands</b>\n"
+        "/start — Open main menu\n"
+        "/create — Start a new website\n"
+        "/mywebsites — Manage your websites\n"
+        "/dashboard — View your dashboard\n"
+        "/stats — View statistics\n"
+        "/guide — Open the creation guide\n/templates — Quick professional starting templates\n/progress — See current creation progress\n"
+        "/cancel — Cancel the current creation\n"
+        "/help — Show this help menu\n/ultra — Open Ultra Creator Lab\n/analytics — View live analytics\n"
+        "The actual creation uses inline buttons so users do not need to remember commands.",
+        reply_markup=kb([[InlineKeyboardButton(text="📖 Open Creation Guide", callback_data="guide_menu")],[InlineKeyboardButton(text="🏠 Main Menu", callback_data="home")]])
+    )
+    await c.answer()
+
+@dp.callback_query(F.data == "guide_menu")
+async def guide_menu_cb(c):
+    await c.message.edit_text("📖 <b>How to Create Your Website</b>\n\nTap any step below to understand it. You can return and start creating at any time.", reply_markup=guide_menu())
+    await c.answer()
+
+@dp.callback_query(F.data.startswith("guide:"))
+async def guide_step(c):
+    key=c.data.split(":",1)[1]
+    info={
+      "occasion":"1️⃣ <b>Choose Occasion</b>\nSelect Birthday, Valentine, Anniversary, Friendship, Congratulations, Surprise, Festival or Custom.",
+      "package":"2️⃣ <b>Choose Package</b>\n✨ Normal: beautiful website with up to 4 photos.\n💎 Premium: advanced story experience, more media, premium themes and interactive sections.",
+      "theme":"3️⃣ <b>Theme & Entrance</b>\nChoose the visual background, then choose how the visitor enters: envelope, gift, portal, cinematic and more.",
+      "text":"4️⃣ <b>Text & Fonts</b>\nAdd recipient name, title and wish message. Choose separate fonts for the title and message.",
+      "extras":"5️⃣ <b>Interactive Extras</b>\nAdd reveal surprises, letters, countdowns and, for Premium, timelines, love meter, reactions and guestbook.",
+      "publish":"6️⃣ <b>Preview & Publish</b>\nPreview privately first. Then choose a Telegram Stars publishing plan. The owner and granted users can publish free permanently."
+    }
+    await c.message.edit_text(info.get(key,"Guide step not found."), reply_markup=kb([[InlineKeyboardButton(text="⬅️ Back to Guide", callback_data="guide_menu")],[InlineKeyboardButton(text="➕ Start Creating", callback_data="categories")]]))
+    await c.answer()
+
+@dp.callback_query(F.data == "dashboard_menu")
+async def dashboard_menu_cb(c):
+    sites = await db.websites.find({"owner_id": c.from_user.id}).to_list(length=500)
+    now=datetime.now(timezone.utc)
+    live=sum(1 for x in sites if x.get("published") and (x.get("is_permanent") or (as_utc(x.get("published_expires_at")) and as_utc(x.get("published_expires_at"))>now)))
+    premium=sum(1 for x in sites if x.get("package")=="premium")
+    views=sum(int(x.get("views",0) or 0) for x in sites)
+    await c.message.edit_text(f"📊 <b>Your Dashboard</b>\n\n🌐 Total websites: <b>{len(sites)}</b>\n🟢 Live now: <b>{live}</b>\n💎 Premium: <b>{premium}</b>\n👁 Total views: <b>{views}</b>", reply_markup=kb([[InlineKeyboardButton(text="🏠 My Websites", callback_data="mywebsites")],[InlineKeyboardButton(text="➕ Create New", callback_data="categories")],[InlineKeyboardButton(text="🏠 Main Menu", callback_data="home")]]))
+    await c.answer()
 
 @dp.callback_query(F.data == "noop")
 async def noop(c):
@@ -264,10 +447,11 @@ async def choose_premium_theme(c):
         return await c.answer("Premium theme not found.", show_alert=True)
     draft["premium_theme"] = theme
     draft["theme"] = theme
-    draft["step"] = "recipient"
+    draft["step"] = "opening_style"
     await save_draft(c.from_user.id, draft)
     await c.message.edit_text(
-        f"💎 <b>{info['name']}</b> selected!\n\nYour Premium website will be a complete interactive journey.\n\nNow send the <b>recipient's name</b>, or send <code>skip</code>."
+        f"💎 <b>{info['name']}</b> selected!\n\nNow choose how the visitor enters the story:",
+        reply_markup=opening_style_menu("premium")
     )
     await c.answer()
 
@@ -278,15 +462,28 @@ async def choose_theme(c):
         return await c.answer("Theme not found", show_alert=True)
     draft = await get_draft(c.from_user.id) or {}
     draft["theme"] = theme
-    draft["step"] = "recipient"
+    draft["step"] = "opening_style"
     await save_draft(c.from_user.id, draft)
     t = THEMES[theme]
     await c.message.edit_text(
         f"{t['name']} selected!\n\n"
         f"🎭 <b>Style:</b> {t['mode'].title()}\n"
         f"✨ <b>Effects:</b> {t['effect']}\n\n"
-        "Now send the <b>recipient's name</b>, or send <code>skip</code>."
+        "Now choose an opening style for this website:",
+        reply_markup=opening_style_menu(draft.get("package", "simple"))
     )
+    await c.answer()
+
+@dp.callback_query(F.data.startswith("opening:"))
+async def choose_opening(c):
+    style = c.data.split(":", 1)[1]
+    draft = await get_draft(c.from_user.id)
+    if not draft or draft.get("step") != "opening_style":
+        return await c.answer("Please start again.", show_alert=True)
+    draft["opening_style"] = style
+    draft["step"] = "recipient"
+    await save_draft(c.from_user.id, draft)
+    await c.message.edit_text("🚪 <b>Opening style selected!</b>\n\nNow send the <b>recipient's name</b>, or send <code>skip</code>.")
     await c.answer()
 
 @dp.callback_query(F.data.startswith("package:"))
@@ -411,12 +608,49 @@ async def my_websites(c):
                 else:
                     remaining = max(0, int((expires-now).total_seconds()/60)) if expires else 0
                     status = f"🟢 LIVE • {remaining} min left"
-                lines.append(f"{status} • <b>{d.get('title','Untitled')}</b>\n{BASE_URL}/s/{d['slug']}")
+                lines.append(f"{status} • <b>{d.get('title','Untitled')}</b> • 👁 {d.get('views',0)} views\n{BASE_URL}/s/{d['slug']}")
             else:
                 lines.append(f"🔒 Draft / Expired • <b>{d.get('title','Untitled')}</b>")
         text = "\n\n".join(lines)
-    await c.message.edit_text(text, reply_markup=kb([[InlineKeyboardButton(text="➕ Create New", callback_data="categories")]]))
+    rows=[]
+    for d in docs:
+        rows.append([InlineKeyboardButton(text=f"⚙️ Manage • {str(d.get('title','Untitled'))[:28]}", callback_data=f"manage:{d['slug']}")])
+    rows += [[InlineKeyboardButton(text="➕ Create New", callback_data="categories")],[InlineKeyboardButton(text="🏠 Main Menu", callback_data="home")]]
+    await c.message.edit_text(text, reply_markup=kb(rows))
     await c.answer()
+
+@dp.callback_query(F.data.startswith("manage:"))
+async def manage_site(c):
+    slug=c.data.split(":",1)[1]
+    site,err=await get_owned_site(slug,c.from_user.id)
+    if err: return await c.answer("Website not found.", show_alert=True)
+    live=site.get("published")
+    text=(f"⚙️ <b>Website Manager</b>\n\n<b>{site.get('title','Untitled')}</b>\n🎨 {site.get('package','simple').title()} • {site.get('type','custom').title()}\n👁 Views: {site.get('views',0)}\n🌐 Status: {'LIVE' if live else 'Draft / Expired'}")
+    rows=[[InlineKeyboardButton(text="🚀 Publish / Renew", callback_data=f"publish:{slug}")],[InlineKeyboardButton(text="📈 Analytics", callback_data=f"analytics:{slug}"), InlineKeyboardButton(text="🔗 Share Kit", callback_data=f"share:{slug}")],[InlineKeyboardButton(text="🎛 Ultra Controls", callback_data=f"controls:{slug}"), InlineKeyboardButton(text="📋 Duplicate as New", callback_data=f"duplicate:{slug}")],[InlineKeyboardButton(text="🗑 Delete", callback_data=f"deleteask:{slug}")],[InlineKeyboardButton(text="⬅️ My Websites", callback_data="mywebsites")]]
+    await c.message.edit_text(text, reply_markup=kb(rows)); await c.answer()
+
+@dp.callback_query(F.data.startswith("duplicate:"))
+async def duplicate_site(c):
+    slug=c.data.split(":",1)[1]
+    site,err=await get_owned_site(slug,c.from_user.id)
+    if err: return await c.answer("Website not found.", show_alert=True)
+    draft={k:site.get(k) for k in ["type","package","theme","opening_style","recipient_name","title","message","title_font","message_font","extras","event_date","surprise_text","letter_text","photo_file_ids","video_file_id"]}
+    draft["title"]=(site.get("title") or "Untitled")+" (Copy)"; draft["step"]="extras"
+    await save_draft(c.from_user.id,draft)
+    await c.message.edit_text("📋 <b>Website copied to a new draft.</b>\n\nYou can now continue with features and media without changing the original website.", reply_markup=premium_extras_menu() if draft.get('package')=='premium' else normal_extras_menu())
+    await c.answer("Copied!")
+
+@dp.callback_query(F.data.startswith("deleteask:"))
+async def delete_ask(c):
+    slug=c.data.split(":",1)[1]
+    await c.message.edit_text("⚠️ <b>Delete this website?</b>\nThis cannot be undone.", reply_markup=kb([[InlineKeyboardButton(text="🗑 Yes, Delete", callback_data=f"deleteyes:{slug}")],[InlineKeyboardButton(text="⬅️ Cancel", callback_data=f"manage:{slug}")]])); await c.answer()
+
+@dp.callback_query(F.data.startswith("deleteyes:"))
+async def delete_yes(c):
+    slug=c.data.split(":",1)[1]
+    result=await db.websites.delete_one({"slug":slug,"owner_id":c.from_user.id})
+    if not result.deleted_count: return await c.answer("Website not found.", show_alert=True)
+    await c.message.edit_text("🗑 Website deleted successfully.", reply_markup=home_menu()); await c.answer("Deleted")
 
 @dp.message(F.photo)
 async def receive_photo(m):
@@ -703,6 +937,73 @@ async def successful(m):
         f"🧾 Telegram Charge: <code>{info.telegram_payment_charge_id}</code>"
     )
 
+@dp.message(Command("create"))
+async def create_cmd(m):
+    await m.answer("➕ <b>Start a New Wish Website</b>\n\nChoose the occasion:", reply_markup=category_menu())
+
+@dp.message(Command("guide"))
+async def guide_cmd(m):
+    await m.answer("📖 <b>WishVerse Creation Guide</b>\n\nChoose a step:", reply_markup=guide_menu())
+
+@dp.message(Command("templates"))
+async def templates_cmd(m):
+    await m.answer("⚡ <b>Quick Templates</b>\n\nChoose a starting style and customize it.", reply_markup=template_menu())
+
+@dp.message(Command("progress"))
+async def progress_cmd(m):
+    draft=await get_draft(m.from_user.id)
+    await m.answer(draft_progress_text(draft), reply_markup=kb([[InlineKeyboardButton(text="➕ Continue / Restart", callback_data="categories")],[InlineKeyboardButton(text="⚡ Templates", callback_data="templates_menu")]]))
+
+@dp.message(Command("cancel"))
+async def cancel_cmd(m):
+    await db.users.update_one({"telegram_id": m.from_user.id}, {"$unset": {"draft": ""}}, upsert=True)
+    await m.answer("❌ Your current creation was cancelled. Your already-created websites were not deleted.", reply_markup=home_menu())
+
+@dp.message(Command("mywebsites"))
+async def mywebsites_cmd(m):
+    docs = await db.websites.find({"owner_id": m.from_user.id}).sort("created_at", -1).limit(10).to_list(length=10)
+    if not docs:
+        return await m.answer("🏠 You have not created any websites yet.", reply_markup=home_menu())
+    now=datetime.now(timezone.utc)
+    lines=["🏠 <b>Your Websites</b>"]
+    for d in docs:
+        live=bool(d.get("published")) and (d.get("is_permanent") or (as_utc(d.get("published_expires_at")) and as_utc(d.get("published_expires_at"))>now))
+        status="🟢 LIVE" if live else "🔒 Draft / Expired"
+        lines.append(f"{status} • <b>{d.get('title','Untitled')}</b> • 👁 {d.get('views',0)}")
+    await m.answer("\n\n".join(lines), reply_markup=kb([[InlineKeyboardButton(text="🏠 Open Website Manager", callback_data="mywebsites")],[InlineKeyboardButton(text="➕ Create New", callback_data="categories")]]))
+
+@dp.message(Command("stats"))
+async def stats(m):
+    docs = await db.websites.find({"owner_id": m.from_user.id}).to_list(length=1000)
+    total = len(docs)
+    live = sum(1 for d in docs if d.get("published"))
+    views = sum(int(d.get("views", 0) or 0) for d in docs)
+    premium = sum(1 for d in docs if d.get("package") == "premium")
+    await m.answer(
+        "📊 <b>Your WishVerse Stats</b>\n\n"
+        f"🌐 Websites: <b>{total}</b>\n"
+        f"🟢 Published: <b>{live}</b>\n"
+        f"💎 Premium created: <b>{premium}</b>\n"
+        f"👁 Total public views: <b>{views}</b>"
+    )
+
+@dp.message(Command("dashboard"))
+async def dashboard(message: Message):
+    sites = await db.websites.find({"owner_id": message.from_user.id}).to_list(length=500)
+    published = sum(1 for x in sites if x.get("published"))
+    premium = sum(1 for x in sites if x.get("package") == "premium")
+    views = sum(int(x.get("views", 0) or 0) for x in sites)
+    await message.answer(
+        "📊 <b>Your WishVerse Dashboard</b>\n\n"
+        f"🌐 Websites: <b>{len(sites)}</b>\n🟢 Live now: <b>{published}</b>\n💎 Premium: <b>{premium}</b>\n👁 Total views: <b>{views}</b>\n\n"
+        "Use 🏠 My Websites to manage your creations.",
+        parse_mode="HTML"
+    )
+
+@dp.message(Command("help"))
+async def help_cmd(m):
+    await m.answer("❓ <b>WishVerse Commands & Help</b>\n\nUse the buttons below for a clear guided experience.", reply_markup=kb([[InlineKeyboardButton(text="❓ Open Help", callback_data="help_menu")],[InlineKeyboardButton(text="📖 Creation Guide", callback_data="guide_menu")],[InlineKeyboardButton(text="🏠 Main Menu", callback_data="home")]]))
+
 @dp.message(Command("grantfree"))
 async def grantfree(m):
     if not is_owner(m.from_user.id):
@@ -756,3 +1057,159 @@ async def run_bot():
         await dp.start_polling(bot, handle_signals=True, close_bot_session=True)
     finally:
         await bot.session.close()
+
+
+@dp.message(Command("studio"))
+async def studio_command(m: Message):
+    await m.answer("🧠 <b>Creator Studio</b>\nBuild faster with templates or start from scratch.", reply_markup=studio_menu())
+
+@dp.message(Command("ideas"))
+async def ideas_command(m: Message):
+    await m.answer("📚 <b>Ideas & Inspiration</b>", reply_markup=ideas_menu())
+
+
+# ======================== ULTRA CREATOR LAB ========================
+def ultra_menu():
+    return kb([
+        [InlineKeyboardButton(text="🧠 AI-style Design Assistant", callback_data="ultra:design"), InlineKeyboardButton(text="🎬 Story Director", callback_data="ultra:story")],
+        [InlineKeyboardButton(text="🎨 Style Mixer", callback_data="ultra:mixer"), InlineKeyboardButton(text="🧩 Experience Builder", callback_data="ultra:experience")],
+        [InlineKeyboardButton(text="📈 Analytics Lab", callback_data="analytics_menu"), InlineKeyboardButton(text="🔗 Viral Share Kit", callback_data="ultra:share")],
+        [InlineKeyboardButton(text="🛡 Privacy & Safety", callback_data="ultra:privacy"), InlineKeyboardButton(text="🏆 Creator Achievements", callback_data="ultra:achievements")],
+        [InlineKeyboardButton(text="🏠 Main Menu", callback_data="home")]
+    ])
+
+@dp.callback_query(F.data == "ultra_lab")
+async def ultra_lab_cb(c):
+    await c.answer()
+    await c.message.edit_text(
+        "🚀 <b>WishVerse Ultra Creator Lab</b>\n\n"
+        "This is your advanced control center. Build websites as interactive experiences—not just pages. "
+        "Every tool below is designed to help users make clearer, richer and more shareable websites.",
+        reply_markup=ultra_menu())
+
+@dp.callback_query(F.data.startswith("ultra:"))
+async def ultra_feature_cb(c):
+    await c.answer()
+    key=c.data.split(":",1)[1]
+    text={
+      "design":"🧠 <b>Design Assistant</b>\n\nUse the occasion, mood and recipient to pick a ready direction: Luxury, Cute, Emotional, Party, Dark, Minimal or Cinematic. Start with a Quick Template, then customize every detail.",
+      "story":"🎬 <b>Story Director</b>\n\nPremium websites follow a story flow: Hook → Choice → Reveal → Letter → Memories → Video → Finale. This makes the visitor feel like they are experiencing a journey.",
+      "mixer":"🎨 <b>Style Mixer</b>\n\nMix background atmosphere, page layout, opening animation, title font and message font independently. Premium themes now support visually different page personalities—not only different colors.",
+      "experience":"🧩 <b>Experience Builder</b>\n\nCombine interactive modules such as Surprise Reveal, Secret Letter, Countdown, Memory Timeline, Love Meter, Reaction Wall and Guestbook.",
+      "share":"🔗 <b>Viral Share Kit</b>\n\nEach published website can be opened from its Website Manager. The Share Kit gives the live link and makes it easy to copy/share it in Telegram, WhatsApp, Instagram bio or anywhere else.",
+      "privacy":"🛡 <b>Privacy & Safety</b>\n\nDrafts stay private. Preview links expire automatically. Public visitors can only access websites after publishing. Owner-managed free access remains protected by your bot owner ID.",
+      "achievements":"🏆 <b>Creator Achievements</b>\n\nTrack your progress through your Dashboard: websites created, live websites, premium creations and total views. More advanced creator milestones can be added later without changing the existing website flow."
+    }.get(key,"🚀 Ultra feature")
+    rows=[]
+    if key in {"design","story","mixer","experience"}:
+        rows.append([InlineKeyboardButton(text="⚡ Open Templates", callback_data="templates_menu"),InlineKeyboardButton(text="🎨 Build Now", callback_data="categories")])
+    rows.append([InlineKeyboardButton(text="⬅️ Ultra Creator Lab", callback_data="ultra_lab")])
+    await c.message.edit_text(text, reply_markup=kb(rows))
+
+@dp.callback_query(F.data == "analytics_menu")
+async def analytics_menu_cb(c):
+    sites=await db.websites.find({"owner_id":c.from_user.id}).to_list(length=500)
+    views=sum(int(x.get("views",0) or 0) for x in sites)
+    top=sorted(sites,key=lambda x:int(x.get("views",0) or 0),reverse=True)[:3]
+    toptext="\n".join(f"• <b>{(x.get('title') or 'Untitled')[:45]}</b> — {x.get('views',0)} views" for x in top) or "No websites yet."
+    await c.message.edit_text(f"📈 <b>Live Analytics</b>\n\n👁 Total views: <b>{views}</b>\n🌐 Websites tracked: <b>{len(sites)}</b>\n\n🏆 <b>Top websites</b>\n{toptext}", reply_markup=kb([[InlineKeyboardButton(text="🏠 My Websites",callback_data="mywebsites")],[InlineKeyboardButton(text="🚀 Ultra Lab",callback_data="ultra_lab")]]))
+    await c.answer()
+
+@dp.callback_query(F.data.startswith("analytics:"))
+async def analytics_site_cb(c):
+    slug=c.data.split(":",1)[1]
+    site,err=await get_owned_site(slug,c.from_user.id)
+    if err:return await c.answer("Website not found.",show_alert=True)
+    created=site.get("created_at")
+    last=site.get("last_viewed_at")
+    await c.message.edit_text(f"📈 <b>Website Analytics</b>\n\n📝 <b>{site.get('title','Untitled')}</b>\n👁 Total views: <b>{site.get('views',0)}</b>\n🕒 Last view: <code>{last or 'No visitor yet'}</code>\n📅 Created: <code>{created or 'Unknown'}</code>\n\nAnalytics are counted automatically when the public website is opened.", reply_markup=kb([[InlineKeyboardButton(text="⬅️ Website Manager",callback_data=f"manage:{slug}")]]))
+    await c.answer()
+
+@dp.callback_query(F.data.startswith("share:"))
+async def share_site_cb(c):
+    slug=c.data.split(":",1)[1]
+    site,err=await get_owned_site(slug,c.from_user.id)
+    if err:return await c.answer("Website not found.",show_alert=True)
+    if not site.get("published"):
+        return await c.answer("Publish the website first to get a public share link.",show_alert=True)
+    await c.message.edit_text(f"🔗 <b>Share Kit</b>\n\n🌐 Your live website:\n<code>{BASE_URL}/s/{slug}</code>\n\nCopy this link and share it anywhere. Your view analytics will update when visitors open the public website.", reply_markup=kb([[InlineKeyboardButton(text="⬅️ Website Manager",callback_data=f"manage:{slug}")]]))
+    await c.answer()
+
+@dp.callback_query(F.data.startswith("controls:"))
+async def controls_cb(c):
+    slug=c.data.split(":",1)[1]
+    site,err=await get_owned_site(slug,c.from_user.id)
+    if err:return await c.answer("Website not found.",show_alert=True)
+    await c.message.edit_text("🎛 <b>Ultra Website Controls</b>\n\nManage and improve this creation from one place.",reply_markup=kb([
+      [InlineKeyboardButton(text="📈 Analytics",callback_data=f"analytics:{slug}"),InlineKeyboardButton(text="🔗 Share Kit",callback_data=f"share:{slug}")],
+      [InlineKeyboardButton(text="📋 Duplicate & Remix",callback_data=f"duplicate:{slug}")],
+      [InlineKeyboardButton(text="🚀 Publish / Renew",callback_data=f"publish:{slug}")],
+      [InlineKeyboardButton(text="⬅️ Website Manager",callback_data=f"manage:{slug}")]
+    ]))
+    await c.answer()
+
+@dp.message(Command("ultra"))
+async def ultra_cmd(m):
+    await m.answer("🚀 <b>WishVerse Ultra Creator Lab</b>",reply_markup=ultra_menu())
+
+@dp.message(Command("analytics"))
+async def analytics_cmd(m):
+    sites=await db.websites.find({"owner_id":m.from_user.id}).to_list(length=500)
+    views=sum(int(x.get("views",0) or 0) for x in sites)
+    await m.answer(f"📈 <b>Your Analytics</b>\n\n👁 Total views: <b>{views}</b>\n🌐 Websites: <b>{len(sites)}</b>",reply_markup=kb([[InlineKeyboardButton(text="📈 Open Full Analytics",callback_data="analytics_menu")]]))
+
+# ======================== ULTRA CREATOR V8 ========================
+def v8_builder_menu():
+    return kb([
+        [InlineKeyboardButton(text="🎨 Design", callback_data="v8:design"), InlineKeyboardButton(text="📝 Content", callback_data="v8:content")],
+        [InlineKeyboardButton(text="🖼 Media", callback_data="v8:media"), InlineKeyboardButton(text="✨ Effects", callback_data="v8:effects")],
+        [InlineKeyboardButton(text="🧩 Sections", callback_data="v8:sections"), InlineKeyboardButton(text="🎬 Story Mode", callback_data="v8:story")],
+        [InlineKeyboardButton(text="🎮 Interactions", callback_data="v8:interactions"), InlineKeyboardButton(text="🔐 Privacy", callback_data="v8:privacy")],
+        [InlineKeyboardButton(text="⏰ Schedule", callback_data="v8:schedule"), InlineKeyboardButton(text="🧠 Smart Assistant", callback_data="v8:assistant")],
+        [InlineKeyboardButton(text="👁 Preview", callback_data="v8:preview"), InlineKeyboardButton(text="🚀 Start Creating", callback_data="categories")],
+        [InlineKeyboardButton(text="🏠 Main Menu", callback_data="home")]
+    ])
+
+@dp.callback_query(F.data == "v8_builder")
+async def v8_builder(c):
+    await c.answer()
+    await c.message.edit_text(
+        "🧱 <b>WishVerse Experience Builder</b>\n\n"
+        "Build a complete interactive experience from one control panel. Choose what you want to customize; the guided creator keeps the process simple.",
+        reply_markup=v8_builder_menu())
+
+@dp.callback_query(F.data.startswith("v8:"))
+async def v8_feature(c):
+    await c.answer()
+    key=c.data.split(":",1)[1]
+    data={
+      "design":"🎨 <b>Design Studio</b>\n\nChoose atmosphere, page personality, layout, title font, message font, colors and opening style. Premium themes can combine these independently.",
+      "content":"📝 <b>Content Studio</b>\n\nControl recipient, title, long wish, signature, secret message and final message. Title and message fonts stay independently customizable.",
+      "media":"🖼 <b>Media Studio</b>\n\nAdd photo memories and video moments. Normal websites support the existing photo allowance; Premium supports the advanced media experience.",
+      "effects":"✨ <b>Animation Studio</b>\n\nPremium effects can include flowers, petals, butterflies, clouds, fireworks, balloons, hearts, stars, ocean movement and cinematic reveals.",
+      "sections":"🧩 <b>Section Builder</b>\n\nBuild with Welcome, Main Wish, Gallery, Video, Timeline, Surprise, Secret Letter, Countdown, Guestbook and Finale sections.",
+      "story":"🎬 <b>Story Mode</b>\n\nCreate a visitor journey: Hook → Continue → Memory → Choice → Reveal → Letter → Finale. This makes a wish feel like an interactive story.",
+      "interactions":"🎮 <b>Interactive Experience</b>\n\nPremium ideas: Love Meter, Reaction Wall, Guestbook, hidden surprise, reveal buttons, memory choices and celebration effects.",
+      "privacy":"🔐 <b>Privacy Controls</b>\n\nDrafts remain private. Preview links expire. Published sites can later support public, link-only, password and scheduled access modes.",
+      "schedule":"⏰ <b>Scheduled Reveal</b>\n\nPrepare the website early and schedule the surprise for a special moment such as midnight on a birthday or Valentine’s Day.",
+      "assistant":"🧠 <b>Smart Design Assistant</b>\n\nPick a feeling—Romantic, Emotional, Funny, Magical, Luxury, Party or Cute—and use templates as a professional starting point.",
+      "preview":"👁 <b>Preview</b>\n\nThe current secure preview remains private and temporary. Public sharing only becomes available after publishing or free-owner/free-user publishing."
+    }
+    rows=[]
+    if key in {"design","content","media","effects","sections","story","interactions","assistant"}:
+        rows.append([InlineKeyboardButton(text="⚡ Use Template", callback_data="templates_menu"), InlineKeyboardButton(text="➕ Create Now", callback_data="categories")])
+    rows.append([InlineKeyboardButton(text="⬅️ Experience Builder", callback_data="v8_builder")])
+    await c.message.edit_text(data.get(key,"🧱 Experience Builder"), reply_markup=kb(rows))
+
+@dp.message(Command("builder"))
+async def builder_cmd(m):
+    await m.answer("🧱 <b>WishVerse Experience Builder</b>", reply_markup=v8_builder_menu())
+
+@dp.message(Command("logstatus"))
+async def logstatus_cmd(m):
+    if not is_owner(m.from_user.id):
+        return await m.answer("⛔ Owner only command.")
+    if LOG_GROUP_ID:
+        await m.answer(f"📡 <b>Logger status: ACTIVE</b>\n\nLog group: <code>{LOG_GROUP_ID}</code>\n\nThe bot logs starts, payment starts, checkout confirmation, successful payments and free-access changes.")
+    else:
+        await m.answer("⚠️ <b>Logger is not configured.</b>\n\nSet <code>LOG_GROUP_ID</code> in Heroku Config Vars and redeploy.")
