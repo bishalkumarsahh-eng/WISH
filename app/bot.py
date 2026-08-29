@@ -61,6 +61,16 @@ PREMIUM_PLANS = {
 def plans_for(site):
     return PREMIUM_PLANS if site.get("package") == "premium" else SIMPLE_PLANS
 
+async def get_owned_site(slug, user_id):
+    # Find by slug first so we can distinguish a missing website from an
+    # ownership problem and avoid false "Website not found" messages.
+    site = await db.websites.find_one({"slug": slug})
+    if not site:
+        return None, "missing"
+    if int(site.get("owner_id", 0)) != int(user_id):
+        return None, "forbidden"
+    return site, None
+
 def publish_plan_menu(slug, site):
     plans = plans_for(site)
     icon = "💎" if site.get("package") == "premium" else "✨"
@@ -113,6 +123,17 @@ def font_menu(package, kind="title"):
 
 def finish_photos_menu():
     return kb([[InlineKeyboardButton(text="✅ Done Adding Photos", callback_data="media:photos_done")]])
+
+def premium_theme_menu():
+    return kb([
+        [InlineKeyboardButton(text="🌌 Midnight Universe", callback_data="ptheme:universe")],
+        [InlineKeyboardButton(text="🎂 Luxury Birthday", callback_data="ptheme:luxury_birthday")],
+        [InlineKeyboardButton(text="💖 Romantic Love Story", callback_data="ptheme:romantic")],
+        [InlineKeyboardButton(text="🌸 Soft Aesthetic", callback_data="ptheme:soft")],
+        [InlineKeyboardButton(text="👑 Royal Luxury", callback_data="ptheme:royal")],
+        [InlineKeyboardButton(text="🎆 Party Celebration", callback_data="ptheme:party")],
+        [InlineKeyboardButton(text="🌙 Memory Journey", callback_data="ptheme:memory")],
+    ])
 
 def normal_extras_menu():
     return kb([
@@ -218,6 +239,34 @@ async def choose_category(c):
 async def themes_page(c):
     page = int(c.data.split(":", 1)[1])
     await c.message.edit_reply_markup(reply_markup=theme_menu(page))
+    await c.answer()
+
+@dp.callback_query(F.data.startswith("ptheme:"))
+async def choose_premium_theme(c):
+    draft = await get_draft(c.from_user.id)
+    if not draft or draft.get("step") != "premium_theme":
+        return await c.answer("Please start again.", show_alert=True)
+
+    theme = c.data.split(":", 1)[1]
+    labels = {
+        "universe": "🌌 Midnight Universe",
+        "luxury_birthday": "🎂 Luxury Birthday",
+        "romantic": "💖 Romantic Love Story",
+        "soft": "🌸 Soft Aesthetic",
+        "royal": "👑 Royal Luxury",
+        "party": "🎆 Party Celebration",
+        "memory": "🌙 Memory Journey",
+    }
+    draft["premium_theme"] = theme
+    draft["theme"] = theme
+    draft["step"] = "title"
+    await save_draft(c.from_user.id, draft)
+
+    await c.message.edit_text(
+        f"✨ <b>{labels.get(theme, 'Premium')}</b> selected!\n\n"
+        "This premium website will be built as an interactive journey with cinematic sections.\n\n"
+        "✍️ Now send the <b>main title</b>."
+    )
     await c.answer()
 
 @dp.callback_query(F.data.startswith("theme:"))
@@ -471,14 +520,15 @@ async def collect(m):
 @dp.callback_query(F.data.startswith("publish:"))
 async def publish(c, bot):
     slug = c.data.split(":", 1)[1]
-    site = await db.websites.find_one({"slug": slug, "owner_id": c.from_user.id})
+    site, site_error = await get_owned_site(slug, c.from_user.id)
     if not site:
-        return await c.answer("Website not found.", show_alert=True)
+        message = "Website not found. It may have been deleted." if site_error == "missing" else "This website belongs to another user."
+        return await c.answer(message, show_alert=True)
 
     now = datetime.now(timezone.utc)
     if site.get("published") and (
         site.get("is_permanent") or
-        (site.get("published_expires_at") and site["published_expires_at"] > now)
+        (site.get("published_expires_at") and as_utc(site["published_expires_at"]) > now)
     ):
         return await c.answer("This website is already live!", show_alert=True)
 
@@ -512,9 +562,10 @@ async def publish(c, bot):
 @dp.callback_query(F.data.startswith("plan:"))
 async def choose_publish_plan(c, bot):
     _, slug, plan_id = c.data.split(":", 2)
-    site = await db.websites.find_one({"slug": slug, "owner_id": c.from_user.id})
+    site, site_error = await get_owned_site(slug, c.from_user.id)
     if not site:
-        return await c.answer("Website not found.", show_alert=True)
+        message = "Website not found. It may have been deleted." if site_error == "missing" else "This website belongs to another user."
+        return await c.answer(message, show_alert=True)
 
     plans = plans_for(site)
     plan = plans.get(plan_id)
@@ -600,8 +651,8 @@ async def successful(m):
 
     now = datetime.now(timezone.utc)
     expires_at = None if plan["hours"] is None else now + timedelta(hours=plan["hours"])
-    await db.websites.update_one(
-        {"slug": p["website_slug"]},
+    update_result = await db.websites.update_one(
+        {"slug": p["website_slug"], "owner_id": m.from_user.id},
         {"$set": {
             "published": True,
             "is_permanent": plan["hours"] is None,
@@ -610,6 +661,11 @@ async def successful(m):
             "published_expires_at": expires_at
         }}
     )
+
+    if update_result.matched_count != 1:
+        log.error("Payment succeeded but website %s was not found for user %s", p["website_slug"], m.from_user.id)
+        await m.answer("⚠️ Payment was received, but the website record could not be found. Please contact the bot owner with your payment details.")
+        return
 
     duration = "permanently 👑" if plan["hours"] is None else f"for {plan['hours']} hours ⏳"
     await m.answer(f"🎉 <b>Payment successful — your website is LIVE {duration}!</b>\n\n🌐 {BASE_URL}/s/{p['website_slug']}")

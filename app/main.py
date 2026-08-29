@@ -203,11 +203,42 @@ h1{{font-family:var(--titlefont);margin:8px 0 18px;font-size:clamp(2.5rem,9vw,6.
 @keyframes drift{{to{{transform:translate(50px,90px)}}}}
 @keyframes breathe{{50%{{transform:scale(1.08);opacity:.55}}}}
 @media(max-width:600px){{.wrap{{width:94vw;padding:64px 0 36px}}.card{{border-radius:24px}}.gallery-grid{{grid-template-columns:repeat(2,1fr)}}}}
+
+/* Premium interactive experience */
+.premium-experience{position:relative;overflow:hidden}
+.chapter-nav{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:24px 0}
+.chapter-nav span{padding:8px 12px;border:1px solid rgba(255,255,255,.2);border-radius:999px;background:rgba(255,255,255,.08)}
+.interactive-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin:22px 0}
+.interactive-card{cursor:pointer;padding:20px;border-radius:22px;background:rgba(255,255,255,.1);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.18);transition:.25s}
+.interactive-card:hover{transform:translateY(-5px) scale(1.02)}
+.star-field{position:relative;min-height:220px;border-radius:24px;background:rgba(0,0,0,.22);overflow:hidden}
+.star{position:absolute;font-size:28px;cursor:pointer;filter:drop-shadow(0 0 10px currentColor)}
+.hidden-reveal{display:none;margin-top:14px;padding:18px;border-radius:18px;background:rgba(255,255,255,.12)}
+.cinematic-final{margin-top:30px;padding:42px 20px;border-radius:28px;text-align:center;background:linear-gradient(135deg,rgba(255,255,255,.12),rgba(255,255,255,.03))}
 </style>
 </head><body>
 {preview_banner}{particles}{stars}{hearts}{lanterns}{rain}{fireworks}
 <div class='wrap'><main class='card'>{recipient}<h1>{title}</h1><div class='message'>{message}</div>{photo_html}{video_html}{surprise_html}<div class='badge'>✨ Created with WishVerse ✨</div></main></div>
-<script>function revealSurprise(b){{b.parentElement.classList.toggle('open');b.textContent=b.parentElement.classList.contains('open')?'✨ Surprise Revealed!':'🎁 Click Here to Reveal Your Surprise'}}function openLetter(b){{b.parentElement.classList.toggle('open');b.textContent=b.parentElement.classList.contains('open')?'💖 Letter Opened':'💌 Open My Secret Letter'}}function celebrate(){{for(let i=0;i<90;i++){{let e=document.createElement('i');e.className='confetti-piece';e.style.left=Math.random()*100+'vw';e.style.transform='rotate('+Math.random()*360+'deg)';e.style.animationDelay=Math.random()*0.7+'s';e.style.background='hsl('+Math.random()*360+' 90% 65%)';document.body.appendChild(e);setTimeout(()=>e.remove(),4500)}}}}</script></body></html>""")
+<script>function revealSurprise(b){{b.parentElement.classList.toggle('open');b.textContent=b.parentElement.classList.contains('open')?'✨ Surprise Revealed!':'🎁 Click Here to Reveal Your Surprise'}}function openLetter(b){{b.parentElement.classList.toggle('open');b.textContent=b.parentElement.classList.contains('open')?'💖 Letter Opened':'💌 Open My Secret Letter'}}function celebrate(){{for(let i=0;i<90;i++){{let e=document.createElement('i');e.className='confetti-piece';e.style.left=Math.random()*100+'vw';e.style.transform='rotate('+Math.random()*360+'deg)';e.style.animationDelay=Math.random()*0.7+'s';e.style.background='hsl('+Math.random()*360+' 90% 65%)';document.body.appendChild(e);setTimeout(()=>e.remove(),4500)}}}}</script>
+{% if site.get("package") == "premium" %}
+<section class="section premium-journey">
+  <div class="chapter-nav"><span>01 · Welcome</span><span>02 · Memories</span><span>03 · Surprise</span><span>04 · Finale</span></div>
+  <div class="interactive-grid">
+    <div class="interactive-card" onclick="this.querySelector('.hidden-reveal').style.display='block'">🎁<br><b>Open a Surprise</b><div class="hidden-reveal">You are more special than words can explain ✨</div></div>
+    <div class="interactive-card" onclick="this.querySelector('.hidden-reveal').style.display='block'">💌<br><b>Open My Letter</b><div class="hidden-reveal">A special message was waiting for you ❤️</div></div>
+    <div class="interactive-card" onclick="this.querySelector('.hidden-reveal').style.display='block'">🕯️<br><b>Make a Wish</b><div class="hidden-reveal">Close your eyes and make your best wish 🌟</div></div>
+  </div>
+  <div class="star-field">
+    <span class="star" style="left:12%;top:25%" onclick="this.innerHTML='💖'">✦</span>
+    <span class="star" style="left:42%;top:55%" onclick="this.innerHTML='🎁'">✦</span>
+    <span class="star" style="left:70%;top:18%" onclick="this.innerHTML='✨'">✦</span>
+    <span class="star" style="left:82%;top:70%" onclick="this.innerHTML='❤️'">✦</span>
+  </div>
+  <div class="cinematic-final"><h2>One Last Thing... ❤️</h2><p>Thank you for being part of this beautiful story.</p><button onclick="this.innerHTML='🎆 Surprise Unlocked! 🎆';document.body.classList.add('celebrate')">Click for the Final Surprise</button></div>
+</section>
+{% endif %}
+
+</body></html>""")
 
 @app.get("/s/{slug}", response_class=HTMLResponse)
 async def public_website(slug: str):
