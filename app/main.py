@@ -229,6 +229,13 @@ def render_premium_story_legacy(site, preview=False, preview_token=None):
     }
     for key, value in replacements.items():
         html = html.replace(key, value)
+
+    # Premium music: the legacy template does not have a song placeholder,
+    # so inject the audio element explicitly into the final HTML.  This is
+    # deliberately done after token replacement so preview URLs retain their
+    # preview token.
+    if song_html and "id=\'wx-song\'" not in html and 'id="wx-song"' not in html:
+        html = html.replace("<body", song_html + "<body", 1)
     return HTMLResponse(html)
 
 
@@ -344,7 +351,7 @@ const song=document.getElementById('wx-song'),musicBtn=document.getElementById('
 let songStarted=false;
 async function startSong(withSound=false){{if(!song)return false;try{{if(song.readyState===0){{song.load();}}song.muted=!withSound;const p=song.play();if(p)await p;if(withSound){{song.muted=false;}}songStarted=true;musicBtn.style.display='block';musicBtn.textContent=withSound?'🎵 Music: ON':'🔇 Music: TAP TO UNMUTE';return true}}catch(e){{musicBtn.style.display='block';musicBtn.textContent='🎵 Tap to Play';return false}}}}
 if(song){{
-  song.volume=0.85;
+  song.volume=0.85; song.preload='auto'; song.loop=true;
   song.addEventListener('error',()=>{{musicBtn.style.display='block';musicBtn.textContent='⚠️ Music unavailable'}});
   musicBtn.onclick=async()=>{{if(song.paused){{await startSong(true)}}else{{song.pause();musicBtn.textContent='🔇 Music: OFF'}}}};
   // Prime muted playback where the browser permits it, but never reload the
