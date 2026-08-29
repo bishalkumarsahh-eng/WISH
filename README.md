@@ -40,3 +40,7 @@ Required Config Vars:
 - BASE_URL
 - SECRET_KEY
 - PREVIEW_MINUTES=2
+
+
+## Fix in this version
+This release fixes the preview/public website 500 error caused by MongoDB datetime timezone comparisons. Existing MongoDB records are supported too.
