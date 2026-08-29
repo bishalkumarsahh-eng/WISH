@@ -4,6 +4,7 @@ import secrets
 from datetime import datetime, timezone, timedelta
 
 from aiogram import Bot, Dispatcher, F
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.client.default import DefaultBotProperties
 from aiogram.filters import Command, CommandStart
 from aiogram.types import (
@@ -41,6 +42,15 @@ def as_utc(value):
     if value.tzinfo is None:
         return value.replace(tzinfo=timezone.utc)
     return value.astimezone(timezone.utc)
+
+async def safe_edit(message, text, reply_markup=None, **kwargs):
+    """Edit a Telegram message without crashing on an idempotent edit."""
+    try:
+        return await message.edit_text(text, reply_markup=reply_markup, **kwargs)
+    except TelegramBadRequest as exc:
+        if "message is not modified" in str(exc).lower():
+            return None
+        raise
 
 def kb(rows):
     return InlineKeyboardMarkup(inline_keyboard=rows)
@@ -317,12 +327,12 @@ async def start(m):
 @dp.callback_query(F.data == "studio_menu")
 async def studio_menu_cb(c):
     await c.answer()
-    await c.message.edit_text("🧠 <b>Creator Studio</b>\n\nChoose how you want to build your experience. Templates are fast; scratch gives you full control.", reply_markup=studio_menu())
+    await safe_edit(c.message, "🧠 <b>Creator Studio</b>\n\nChoose how you want to build your experience. Templates are fast; scratch gives you full control.", reply_markup=studio_menu())
 
 @dp.callback_query(F.data == "ideas_menu")
 async def ideas_menu_cb(c):
     await c.answer()
-    await c.message.edit_text("📚 <b>Wish Ideas & Inspiration</b>\n\nTap an occasion for design ideas, recommended opening styles and interactive features.", reply_markup=ideas_menu())
+    await safe_edit(c.message, "📚 <b>Wish Ideas & Inspiration</b>\n\nTap an occasion for design ideas, recommended opening styles and interactive features.", reply_markup=ideas_menu())
 
 @dp.callback_query(F.data.startswith("idea:"))
 async def idea_cb(c):
@@ -335,16 +345,16 @@ async def idea_cb(c):
       "surprise":"🎁 <b>Surprise</b>\nMystery opening → Click-to-Reveal → Confetti → Video moment → Secret message.",
       "aesthetic":"🌸 <b>Aesthetic</b>\nTry Garden, Neon, Luxury, Scrapbook, Postcard, Night Universe or Cinematic styles."
     }
-    await c.message.edit_text(ideas.get(key,"💡 Choose an idea."), reply_markup=kb([[InlineKeyboardButton(text="⚡ Use a Template", callback_data="templates_menu")],[InlineKeyboardButton(text="🎨 Create Now", callback_data="categories")],[InlineKeyboardButton(text="🔙 Ideas", callback_data="ideas_menu")]]))
+    await safe_edit(c.message, ideas.get(key,"💡 Choose an idea."), reply_markup=kb([[InlineKeyboardButton(text="⚡ Use a Template", callback_data="templates_menu")],[InlineKeyboardButton(text="🎨 Create Now", callback_data="categories")],[InlineKeyboardButton(text="🔙 Ideas", callback_data="ideas_menu")]]))
 
 @dp.callback_query(F.data == "home")
 async def home(c):
-    await c.message.edit_text("🏠 <b>WishVerse Main Menu</b>\n\nCreate, manage and track your wish websites from here.", reply_markup=home_menu())
+    await safe_edit(c.message, "🏠 <b>WishVerse Main Menu</b>\n\nCreate, manage and track your wish websites from here.", reply_markup=home_menu())
     await c.answer()
 
 @dp.callback_query(F.data == "templates_menu")
 async def templates_menu_cb(c):
-    await c.message.edit_text("⚡ <b>Quick Templates</b>\n\nChoose a professionally prepared starting style. You can still customize the recipient, title, message, media and other details.", reply_markup=template_menu())
+    await safe_edit(c.message, "⚡ <b>Quick Templates</b>\n\nChoose a professionally prepared starting style. You can still customize the recipient, title, message, media and other details.", reply_markup=template_menu())
     await c.answer()
 
 @dp.callback_query(F.data.startswith("template:"))
@@ -356,19 +366,19 @@ async def template_choose(c):
     draft=dict(preset)
     draft["step"]="recipient"
     await save_draft(c.from_user.id, draft)
-    await c.message.edit_text("⚡ <b>Template loaded!</b>\n\nThe occasion, package, visual style, opening and starter features are ready.\n\nNow send the <b>recipient's name</b>, or send <code>skip</code>.")
+    await safe_edit(c.message, "⚡ <b>Template loaded!</b>\n\nThe occasion, package, visual style, opening and starter features are ready.\n\nNow send the <b>recipient's name</b>, or send <code>skip</code>.")
     await c.answer("Template ready!")
 
 @dp.callback_query(F.data == "progress_menu")
 async def progress_menu_cb(c):
     draft=await get_draft(c.from_user.id)
     rows=[[InlineKeyboardButton(text="➕ Start / Restart Creation", callback_data="categories")],[InlineKeyboardButton(text="⚡ Use Template", callback_data="templates_menu")],[InlineKeyboardButton(text="🏠 Main Menu", callback_data="home")]]
-    await c.message.edit_text(draft_progress_text(draft), reply_markup=kb(rows))
+    await safe_edit(c.message, draft_progress_text(draft), reply_markup=kb(rows))
     await c.answer()
 
 @dp.callback_query(F.data == "help_menu")
 async def help_menu_cb(c):
-    await c.message.edit_text(
+    await safe_edit(c.message, 
         "❓ <b>WishVerse Help</b>\n\n"
         "<b>Main commands</b>\n"
         "/start — Open main menu\n"
@@ -386,7 +396,7 @@ async def help_menu_cb(c):
 
 @dp.callback_query(F.data == "guide_menu")
 async def guide_menu_cb(c):
-    await c.message.edit_text("📖 <b>How to Create Your Website</b>\n\nTap any step below to understand it. You can return and start creating at any time.", reply_markup=guide_menu())
+    await safe_edit(c.message, "📖 <b>How to Create Your Website</b>\n\nTap any step below to understand it. You can return and start creating at any time.", reply_markup=guide_menu())
     await c.answer()
 
 @dp.callback_query(F.data.startswith("guide:"))
@@ -400,7 +410,7 @@ async def guide_step(c):
       "extras":"5️⃣ <b>Interactive Extras</b>\nAdd reveal surprises, letters, countdowns and, for Premium, timelines, love meter, reactions and guestbook.",
       "publish":"6️⃣ <b>Preview & Publish</b>\nPreview privately first. Then choose a Telegram Stars publishing plan. The owner and granted users can publish free permanently."
     }
-    await c.message.edit_text(info.get(key,"Guide step not found."), reply_markup=kb([[InlineKeyboardButton(text="⬅️ Back to Guide", callback_data="guide_menu")],[InlineKeyboardButton(text="➕ Start Creating", callback_data="categories")]]))
+    await safe_edit(c.message, info.get(key,"Guide step not found."), reply_markup=kb([[InlineKeyboardButton(text="⬅️ Back to Guide", callback_data="guide_menu")],[InlineKeyboardButton(text="➕ Start Creating", callback_data="categories")]]))
     await c.answer()
 
 @dp.callback_query(F.data == "dashboard_menu")
@@ -410,7 +420,7 @@ async def dashboard_menu_cb(c):
     live=sum(1 for x in sites if x.get("published") and (x.get("is_permanent") or (as_utc(x.get("published_expires_at")) and as_utc(x.get("published_expires_at"))>now)))
     premium=sum(1 for x in sites if x.get("package")=="premium")
     views=sum(int(x.get("views",0) or 0) for x in sites)
-    await c.message.edit_text(f"📊 <b>Your Dashboard</b>\n\n🌐 Total websites: <b>{len(sites)}</b>\n🟢 Live now: <b>{live}</b>\n💎 Premium: <b>{premium}</b>\n👁 Total views: <b>{views}</b>", reply_markup=kb([[InlineKeyboardButton(text="🏠 My Websites", callback_data="mywebsites")],[InlineKeyboardButton(text="➕ Create New", callback_data="categories")],[InlineKeyboardButton(text="🏠 Main Menu", callback_data="home")]]))
+    await safe_edit(c.message, f"📊 <b>Your Dashboard</b>\n\n🌐 Total websites: <b>{len(sites)}</b>\n🟢 Live now: <b>{live}</b>\n💎 Premium: <b>{premium}</b>\n👁 Total views: <b>{views}</b>", reply_markup=kb([[InlineKeyboardButton(text="🏠 My Websites", callback_data="mywebsites")],[InlineKeyboardButton(text="➕ Create New", callback_data="categories")],[InlineKeyboardButton(text="🏠 Main Menu", callback_data="home")]]))
     await c.answer()
 
 @dp.callback_query(F.data == "noop")
@@ -419,14 +429,14 @@ async def noop(c):
 
 @dp.callback_query(F.data == "categories")
 async def categories(c):
-    await c.message.edit_text("🎉 <b>Choose what you want to create</b>", reply_markup=category_menu())
+    await safe_edit(c.message, "🎉 <b>Choose what you want to create</b>", reply_markup=category_menu())
     await c.answer()
 
 @dp.callback_query(F.data.startswith("cat:"))
 async def choose_category(c):
     cat = c.data.split(":", 1)[1]
     await save_draft(c.from_user.id, {"type": cat, "step": "package"})
-    await c.message.edit_text(
+    await safe_edit(c.message, 
         "📦 <b>Choose how you want to create this website</b>\n\n"
         "✨ <b>Normal</b> — a beautiful single-page wish, up to 4 photos, fonts and interactive extras.\n\n"
         "💎 <b>Premium Story Experience</b> — a full interactive journey like the birthday website you shared: intro → choices → surprise → letter → memories → video → finale.",
@@ -453,7 +463,7 @@ async def choose_premium_theme(c):
     draft["theme"] = theme
     draft["step"] = "opening_style"
     await save_draft(c.from_user.id, draft)
-    await c.message.edit_text(
+    await safe_edit(c.message, 
         f"💎 <b>{info['name']}</b> selected!\n\nNow choose how the visitor enters the story:",
         reply_markup=opening_style_menu("premium")
     )
@@ -469,7 +479,7 @@ async def choose_theme(c):
     draft["step"] = "opening_style"
     await save_draft(c.from_user.id, draft)
     t = THEMES[theme]
-    await c.message.edit_text(
+    await safe_edit(c.message, 
         f"{t['name']} selected!\n\n"
         f"🎭 <b>Style:</b> {t['mode'].title()}\n"
         f"✨ <b>Effects:</b> {t['effect']}\n\n"
@@ -487,7 +497,7 @@ async def choose_opening(c):
     draft["opening_style"] = style
     draft["step"] = "recipient"
     await save_draft(c.from_user.id, draft)
-    await c.message.edit_text("🚪 <b>Opening style selected!</b>\n\nNow send the <b>recipient's name</b>, or send <code>skip</code>.")
+    await safe_edit(c.message, "🚪 <b>Opening style selected!</b>\n\nNow send the <b>recipient's name</b>, or send <code>skip</code>.")
     await c.answer()
 
 @dp.callback_query(F.data.startswith("package:"))
@@ -500,7 +510,7 @@ async def choose_package(c):
     if package == "simple":
         draft["step"] = "theme"
         await save_draft(c.from_user.id, draft)
-        await c.message.edit_text(
+        await safe_edit(c.message, 
             "✨ <b>Normal Website selected</b>\n\nChoose the background theme. After that you will add the name, title, message, fonts and up to 4 photos.",
             reply_markup=theme_menu(0)
         )
@@ -508,7 +518,7 @@ async def choose_package(c):
         draft["step"] = "premium_theme"
         await save_draft(c.from_user.id, draft)
         category = draft.get("type", "custom")
-        await c.message.edit_text(
+        await safe_edit(c.message, 
             "💎 <b>Premium Story Experience selected</b>\n\nNow choose the complete story theme for your occasion. Every Premium theme uses the interactive multi-screen style inspired by the birthday website you sent.",
             reply_markup=premium_theme_menu(category)
         )
@@ -527,16 +537,16 @@ async def choose_font(c):
         draft["title_font"] = font
         draft["step"] = "message_font"
         await save_draft(c.from_user.id, draft)
-        await c.message.edit_text("💌 Now choose a DIFFERENT font for the wish/message text:", reply_markup=font_menu(draft.get("package"), "message"))
+        await safe_edit(c.message, "💌 Now choose a DIFFERENT font for the wish/message text:", reply_markup=font_menu(draft.get("package"), "message"))
     else:
         draft["message_font"] = font
         draft["step"] = "extras"
         draft.setdefault("photo_file_ids", [])
         await save_draft(c.from_user.id, draft)
         if draft.get("package") == "premium":
-            await c.message.edit_text("💎 Add premium interactive experiences! You can select multiple:", reply_markup=premium_extras_menu())
+            await safe_edit(c.message, "💎 Add premium interactive experiences! You can select multiple:", reply_markup=premium_extras_menu())
         else:
-            await c.message.edit_text(
+            await safe_edit(c.message, 
                 "✨ <b>Add attractive features to your Normal website</b>\n\n"
                 "You can include a reveal surprise, secret message and celebration effect. "
                 "Then continue to upload up to <b>4 photos</b>.",
@@ -555,7 +565,7 @@ async def premium_extra(c):
         await save_draft(c.from_user.id, draft)
         limit = 8 if draft.get("package") == "premium" else 4
         label = "premium" if draft.get("package") == "premium" else "Normal"
-        await c.message.edit_text(
+        await safe_edit(c.message, 
             f"📷 <b>Send your {label} website photos</b>\n\n"
             f"You can send up to <b>{limit} photos</b>. You can also tap Done Adding Photos whenever you finish.",
             reply_markup=finish_photos_menu()
@@ -583,7 +593,7 @@ async def photos_done(c):
     if draft.get("package") == "premium":
         draft["step"] = "video"
         await save_draft(c.from_user.id, draft)
-        await c.message.edit_text(
+        await safe_edit(c.message, 
             f"🎬 <b>Premium video section</b>\n\n"
             f"Photos added: <b>{len(draft.get('photo_file_ids', []))}/8</b>\n\n"
             "Now send <b>one video</b>, or send <code>skip</code> to finish without a video."
@@ -620,7 +630,7 @@ async def my_websites(c):
     for d in docs:
         rows.append([InlineKeyboardButton(text=f"⚙️ Manage • {str(d.get('title','Untitled'))[:28]}", callback_data=f"manage:{d['slug']}")])
     rows += [[InlineKeyboardButton(text="➕ Create New", callback_data="categories")],[InlineKeyboardButton(text="🏠 Main Menu", callback_data="home")]]
-    await c.message.edit_text(text, reply_markup=kb(rows))
+    await safe_edit(c.message, text, reply_markup=kb(rows))
     await c.answer()
 
 @dp.callback_query(F.data.startswith("manage:"))
@@ -631,7 +641,7 @@ async def manage_site(c):
     live=site.get("published")
     text=(f"⚙️ <b>Website Manager</b>\n\n<b>{site.get('title','Untitled')}</b>\n🎨 {site.get('package','simple').title()} • {site.get('type','custom').title()}\n👁 Views: {site.get('views',0)}\n🌐 Status: {'LIVE' if live else 'Draft / Expired'}")
     rows=[[InlineKeyboardButton(text="🚀 Publish / Renew", callback_data=f"publish:{slug}")],[InlineKeyboardButton(text="📈 Analytics", callback_data=f"analytics:{slug}"), InlineKeyboardButton(text="🔗 Share Kit", callback_data=f"share:{slug}")],[InlineKeyboardButton(text="🎛 Ultra Controls", callback_data=f"controls:{slug}"), InlineKeyboardButton(text="📋 Duplicate as New", callback_data=f"duplicate:{slug}")],[InlineKeyboardButton(text="🗑 Delete", callback_data=f"deleteask:{slug}")],[InlineKeyboardButton(text="⬅️ My Websites", callback_data="mywebsites")]]
-    await c.message.edit_text(text, reply_markup=kb(rows)); await c.answer()
+    await safe_edit(c.message, text, reply_markup=kb(rows)); await c.answer()
 
 @dp.callback_query(F.data.startswith("duplicate:"))
 async def duplicate_site(c):
@@ -641,20 +651,20 @@ async def duplicate_site(c):
     draft={k:site.get(k) for k in ["type","package","theme","opening_style","recipient_name","title","message","title_font","message_font","extras","event_date","surprise_text","letter_text","photo_file_ids","video_file_id"]}
     draft["title"]=(site.get("title") or "Untitled")+" (Copy)"; draft["step"]="extras"
     await save_draft(c.from_user.id,draft)
-    await c.message.edit_text("📋 <b>Website copied to a new draft.</b>\n\nYou can now continue with features and media without changing the original website.", reply_markup=premium_extras_menu() if draft.get('package')=='premium' else normal_extras_menu())
+    await safe_edit(c.message, "📋 <b>Website copied to a new draft.</b>\n\nYou can now continue with features and media without changing the original website.", reply_markup=premium_extras_menu() if draft.get('package')=='premium' else normal_extras_menu())
     await c.answer("Copied!")
 
 @dp.callback_query(F.data.startswith("deleteask:"))
 async def delete_ask(c):
     slug=c.data.split(":",1)[1]
-    await c.message.edit_text("⚠️ <b>Delete this website?</b>\nThis cannot be undone.", reply_markup=kb([[InlineKeyboardButton(text="🗑 Yes, Delete", callback_data=f"deleteyes:{slug}")],[InlineKeyboardButton(text="⬅️ Cancel", callback_data=f"manage:{slug}")]])); await c.answer()
+    await safe_edit(c.message, "⚠️ <b>Delete this website?</b>\nThis cannot be undone.", reply_markup=kb([[InlineKeyboardButton(text="🗑 Yes, Delete", callback_data=f"deleteyes:{slug}")],[InlineKeyboardButton(text="⬅️ Cancel", callback_data=f"manage:{slug}")]])); await c.answer()
 
 @dp.callback_query(F.data.startswith("deleteyes:"))
 async def delete_yes(c):
     slug=c.data.split(":",1)[1]
     result=await db.websites.delete_one({"slug":slug,"owner_id":c.from_user.id})
     if not result.deleted_count: return await c.answer("Website not found.", show_alert=True)
-    await c.message.edit_text("🗑 Website deleted successfully.", reply_markup=home_menu()); await c.answer("Deleted")
+    await safe_edit(c.message, "🗑 Website deleted successfully.", reply_markup=home_menu()); await c.answer("Deleted")
 
 @dp.message(F.photo)
 async def receive_photo(m):
@@ -781,7 +791,7 @@ async def publish(c, bot):
 
     plans = plans_for(site)
     package_name = "💎 Premium" if site.get("package") == "premium" else "✨ Simple"
-    await c.message.edit_text(
+    await safe_edit(c.message, 
         f"🚀 <b>{package_name} Publishing</b>\n\n"
         f"⚡ <b>{plans['2h']['stars']} ⭐</b> — Live for 2 hours\n"
         f"🌟 <b>{plans['15h']['stars']} ⭐</b> — Live for 15 hours\n"
@@ -1158,7 +1168,7 @@ def ultra_menu():
 @dp.callback_query(F.data == "ultra_lab")
 async def ultra_lab_cb(c):
     await c.answer()
-    await c.message.edit_text(
+    await safe_edit(c.message, 
         "🚀 <b>WishVerse Ultra Creator Lab</b>\n\n"
         "This is your advanced control center. Build websites as interactive experiences—not just pages. "
         "Every tool below is designed to help users make clearer, richer and more shareable websites.",
@@ -1181,7 +1191,7 @@ async def ultra_feature_cb(c):
     if key in {"design","story","mixer","experience"}:
         rows.append([InlineKeyboardButton(text="⚡ Open Templates", callback_data="templates_menu"),InlineKeyboardButton(text="🎨 Build Now", callback_data="categories")])
     rows.append([InlineKeyboardButton(text="⬅️ Ultra Creator Lab", callback_data="ultra_lab")])
-    await c.message.edit_text(text, reply_markup=kb(rows))
+    await safe_edit(c.message, text, reply_markup=kb(rows))
 
 @dp.callback_query(F.data == "analytics_menu")
 async def analytics_menu_cb(c):
@@ -1189,7 +1199,7 @@ async def analytics_menu_cb(c):
     views=sum(int(x.get("views",0) or 0) for x in sites)
     top=sorted(sites,key=lambda x:int(x.get("views",0) or 0),reverse=True)[:3]
     toptext="\n".join(f"• <b>{(x.get('title') or 'Untitled')[:45]}</b> — {x.get('views',0)} views" for x in top) or "No websites yet."
-    await c.message.edit_text(f"📈 <b>Live Analytics</b>\n\n👁 Total views: <b>{views}</b>\n🌐 Websites tracked: <b>{len(sites)}</b>\n\n🏆 <b>Top websites</b>\n{toptext}", reply_markup=kb([[InlineKeyboardButton(text="🏠 My Websites",callback_data="mywebsites")],[InlineKeyboardButton(text="🚀 Ultra Lab",callback_data="ultra_lab")]]))
+    await safe_edit(c.message, f"📈 <b>Live Analytics</b>\n\n👁 Total views: <b>{views}</b>\n🌐 Websites tracked: <b>{len(sites)}</b>\n\n🏆 <b>Top websites</b>\n{toptext}", reply_markup=kb([[InlineKeyboardButton(text="🏠 My Websites",callback_data="mywebsites")],[InlineKeyboardButton(text="🚀 Ultra Lab",callback_data="ultra_lab")]]))
     await c.answer()
 
 @dp.callback_query(F.data.startswith("analytics:"))
@@ -1207,7 +1217,7 @@ async def analytics_site_cb(c):
     shared=int(events.get("shared",0) or 0)
     reaction_total=sum(int(v or 0) for v in reactions.values())
     analytics_text=(f"📈 <b>Website Analytics</b>\n\n📝 <b>{site.get('title','Untitled')}</b>\n👁 Total views: <b>{site.get('views',0)}</b>\n✨ Experience opens: <b>{opens}</b>\n🏁 Finales unlocked: <b>{finale}</b>\n📸 Photos opened: <b>{photos}</b>\n↗ Shares: <b>{shared}</b>\n💬 Guestbook entries: <b>{site.get('guestbook_count',0)}</b>\n💖 Reactions: <b>{reaction_total}</b>\n🕒 Last view: <code>{last or 'No visitor yet'}</code>\n📅 Created: <code>{created or 'Unknown'}</code>\n\nInteraction analytics are collected automatically on published Premium experiences.")
-    await c.message.edit_text(analytics_text, reply_markup=kb([[InlineKeyboardButton(text="⬅️ Website Manager",callback_data=f"manage:{slug}")]]))
+    await safe_edit(c.message, analytics_text, reply_markup=kb([[InlineKeyboardButton(text="⬅️ Website Manager",callback_data=f"manage:{slug}")]]))
     await c.answer()
 
 @dp.callback_query(F.data.startswith("share:"))
@@ -1217,7 +1227,7 @@ async def share_site_cb(c):
     if err:return await c.answer("Website not found.",show_alert=True)
     if not site.get("published"):
         return await c.answer("Publish the website first to get a public share link.",show_alert=True)
-    await c.message.edit_text(f"🔗 <b>Share Kit</b>\n\n🌐 Your live website:\n<code>{BASE_URL}/s/{slug}</code>\n\nCopy this link and share it anywhere. Your view analytics will update when visitors open the public website.", reply_markup=kb([[InlineKeyboardButton(text="⬅️ Website Manager",callback_data=f"manage:{slug}")]]))
+    await safe_edit(c.message, f"🔗 <b>Share Kit</b>\n\n🌐 Your live website:\n<code>{BASE_URL}/s/{slug}</code>\n\nCopy this link and share it anywhere. Your view analytics will update when visitors open the public website.", reply_markup=kb([[InlineKeyboardButton(text="⬅️ Website Manager",callback_data=f"manage:{slug}")]]))
     await c.answer()
 
 @dp.callback_query(F.data.startswith("controls:"))
@@ -1225,7 +1235,7 @@ async def controls_cb(c):
     slug=c.data.split(":",1)[1]
     site,err=await get_owned_site(slug,c.from_user.id)
     if err:return await c.answer("Website not found.",show_alert=True)
-    await c.message.edit_text("🎛 <b>Ultra Website Controls</b>\n\nManage and improve this creation from one place.",reply_markup=kb([
+    await safe_edit(c.message, "🎛 <b>Ultra Website Controls</b>\n\nManage and improve this creation from one place.",reply_markup=kb([
       [InlineKeyboardButton(text="📈 Analytics",callback_data=f"analytics:{slug}"),InlineKeyboardButton(text="🔗 Share Kit",callback_data=f"share:{slug}")],
       [InlineKeyboardButton(text="📋 Duplicate & Remix",callback_data=f"duplicate:{slug}")],
       [InlineKeyboardButton(text="🚀 Publish / Renew",callback_data=f"publish:{slug}")],
@@ -1258,7 +1268,7 @@ def v8_builder_menu():
 @dp.callback_query(F.data == "v8_builder")
 async def v8_builder(c):
     await c.answer()
-    await c.message.edit_text(
+    await safe_edit(c.message, 
         "🧱 <b>WishVerse Experience Builder</b>\n\n"
         "Build a complete interactive experience from one control panel. Choose what you want to customize; the guided creator keeps the process simple.",
         reply_markup=v8_builder_menu())
@@ -1284,7 +1294,7 @@ async def v8_feature(c):
     if key in {"design","content","media","effects","sections","story","interactions","assistant"}:
         rows.append([InlineKeyboardButton(text="⚡ Use Template", callback_data="templates_menu"), InlineKeyboardButton(text="➕ Create Now", callback_data="categories")])
     rows.append([InlineKeyboardButton(text="⬅️ Experience Builder", callback_data="v8_builder")])
-    await c.message.edit_text(data.get(key,"🧱 Experience Builder"), reply_markup=kb(rows))
+    await safe_edit(c.message, data.get(key,"🧱 Experience Builder"), reply_markup=kb(rows))
 
 @dp.message(Command("builder"))
 async def builder_cmd(m):
