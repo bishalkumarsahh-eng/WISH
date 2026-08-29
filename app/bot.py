@@ -12,7 +12,7 @@ from aiogram.types import (
     InlineKeyboardButton, LabeledPrice, PreCheckoutQuery
 )
 
-from .config import BOT_TOKEN, OWNER_ID, BASE_URL, PREVIEW_MINUTES, LOG_GROUP_ID
+from .config import BOT_TOKEN, OWNER_ID, BASE_URL, PREVIEW_SECONDS, LOG_GROUP_ID
 from .db import db, setup_indexes
 from .themes import THEMES, PREMIUM_THEME_CONFIG
 
@@ -287,6 +287,7 @@ async def create_site_from_draft(message, draft):
         "letter_text": draft.get("letter_text", "You mean more to me than words can say. 💖"),
         "photo_file_ids": draft.get("photo_file_ids", []),
         "video_file_id": draft.get("video_file_id"),
+        "song_file_id": draft.get("song_file_id"),
         "published": False,
         "created_at": datetime.now(timezone.utc),
     }
@@ -298,16 +299,17 @@ async def create_site_from_draft(message, draft):
         "📷 <b>Normal package:</b> up to 4 photos"
         if site["package"] == "simple"
         else f"💎 <b>Premium package:</b> {len(site['photo_file_ids'])} photo(s) + "
-             f"{'1 video' if site.get('video_file_id') else 'no video'}"
+             f"{'1 video' if site.get('video_file_id') else 'no video'} + "
+             f"{'1 song' if site.get('song_file_id') else 'no song'}"
     )
     await message.answer(
         f"🎉 <b>Your professional website is ready!</b>\n\n"
         f"{media_text}\n"
         f"🔤 Font: <b>{(PREMIUM_FONTS if site['package']=='premium' else SIMPLE_FONTS).get(site.get('title_font', 'inter'), ('Modern','Inter'))[0]}</b>\n\n"
-        f"👀 Preview is private and stays active for <b>{PREVIEW_MINUTES} minutes after first opening</b>.\n"
+        f"👀 Preview is private and stays active for <b>{PREVIEW_SECONDS} seconds after first opening</b>.\n"
         f"🌐 Public sharing unlocks only after publishing.",
         reply_markup=kb([
-            [InlineKeyboardButton(text="👀 Open Preview • 2 min", url=url)],
+            [InlineKeyboardButton(text="👀 Open Preview • 30 sec", url=url)],
             [InlineKeyboardButton(text="🚀 Publish Website", callback_data=f"publish:{slug}")]
         ])
     )
@@ -648,7 +650,7 @@ async def duplicate_site(c):
     slug=c.data.split(":",1)[1]
     site,err=await get_owned_site(slug,c.from_user.id)
     if err: return await c.answer("Website not found.", show_alert=True)
-    draft={k:site.get(k) for k in ["type","package","theme","opening_style","recipient_name","title","message","title_font","message_font","extras","event_date","surprise_text","letter_text","photo_file_ids","video_file_id"]}
+    draft={k:site.get(k) for k in ["type","package","theme","opening_style","recipient_name","title","message","title_font","message_font","extras","event_date","surprise_text","letter_text","photo_file_ids","video_file_id","song_file_id"]}
     draft["title"]=(site.get("title") or "Untitled")+" (Copy)"; draft["step"]="extras"
     await save_draft(c.from_user.id,draft)
     await safe_edit(c.message, "📋 <b>Website copied to a new draft.</b>\n\nYou can now continue with features and media without changing the original website.", reply_markup=premium_extras_menu() if draft.get('package')=='premium' else normal_extras_menu())
@@ -697,7 +699,7 @@ async def receive_photo(m):
         if len(photos) >= 8:
             draft["step"] = "video"
             await save_draft(m.from_user.id, draft)
-            await m.answer("📷 You reached the 8-photo limit.\n\n🎬 Now send one video or send <code>skip</code>.")
+            await m.answer("📷 You reached the 8-photo limit.\n\n🎬 Now send one video or send <code>skip</code>.\n🎵 After that, you can add one song for the Premium website.")
         else:
             await m.answer(
                 f"✅ Photo added! <b>{len(photos)}/8</b>\n"
@@ -711,6 +713,16 @@ async def receive_video(m):
     if not draft or draft.get("step") != "video" or draft.get("package") != "premium":
         return
     draft["video_file_id"] = m.video.file_id
+    draft["step"] = "audio"
+    await save_draft(m.from_user.id, draft)
+    await m.answer("🎵 <b>Premium Song</b>\n\nSend an <b>audio/song</b> to play when the website opens, or send <code>skip</code> to finish.")
+
+@dp.message(F.audio)
+async def receive_audio(m):
+    draft = await get_draft(m.from_user.id)
+    if not draft or draft.get("step") != "audio" or draft.get("package") != "premium":
+        return
+    draft["song_file_id"] = m.audio.file_id
     await create_site_from_draft(m, draft)
 
 @dp.message(F.text & ~F.text.startswith("/"))
@@ -756,6 +768,11 @@ async def collect(m):
         return await m.answer("Use the <b>Done Adding Photos</b> button to continue to the video step.")
 
     if step == "video" and m.text.strip().lower() == "skip":
+        draft["step"] = "audio"
+        await save_draft(m.from_user.id, draft)
+        return await m.answer("🎵 <b>Premium Song</b>\n\nSend an <b>audio/song</b> to play when the website opens, or send <code>skip</code> to finish.")
+
+    if step == "audio" and m.text.strip().lower() == "skip":
         return await create_site_from_draft(m, draft)
 
 @dp.callback_query(F.data.startswith("publish:"))
