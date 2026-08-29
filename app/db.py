@@ -8,6 +8,6 @@ async def setup_indexes():
     if db is None:
         return
     await db.websites.create_index("slug", unique=True)
-    await db.websites.create_index([("owner_id", 1)])
-    await db.payments.create_index("telegram_payment_charge_id", unique=True, sparse=True)
+    await db.websites.create_index("owner_id")
     await db.users.create_index("telegram_id", unique=True)
+    await db.payments.create_index("telegram_payment_charge_id", unique=True, sparse=True)
