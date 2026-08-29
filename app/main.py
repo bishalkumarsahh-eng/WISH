@@ -116,8 +116,17 @@ def render_site(site, preview=False, preview_token=None):
     accent, bg = theme["accent"], theme["bg"]
     effect = theme["effect"]
 
-    font_name, font_google = FONT_MAP.get(site.get("font"), FONT_MAP["inter"])
-    font_url = f"https://fonts.googleapis.com/css2?family={font_google}&display=swap"
+    title_font, title_google = FONT_MAP.get(site.get("title_font"), FONT_MAP.get(site.get("font"), FONT_MAP["playfair"]))
+    message_font, message_google = FONT_MAP.get(site.get("message_font"), FONT_MAP.get(site.get("font"), FONT_MAP["inter"]))
+    font_url = f"https://fonts.googleapis.com/css2?family={title_google}&family={message_google}&display=swap"
+    extras = set(site.get("extras", []))
+    surprise_html = ""
+    if "reveal" in extras:
+        surprise_html = f"<section class='surprise'><button onclick='revealSurprise(this)'>🎁 Click Here to Reveal Your Surprise</button><div class='secret'>{escape(site.get('surprise_text','A special surprise just for you! ✨'))}</div></section>"
+    if "letter" in extras:
+        surprise_html += f"<section class='letter'><button onclick='openLetter(this)'>💌 Open My Secret Letter</button><div class='letter-text'>{escape(site.get('letter_text','You mean more to me than words can say. 💖'))}</div></section>"
+    if "confetti" in extras:
+        surprise_html += "<button class='celebrate' onclick='celebrate()'>🎉 Celebrate!</button><div id='confetti'></div>"
 
     media_suffix = f"?token={quote(preview_token)}" if preview and preview_token else ""
     photos = site.get("photo_file_ids", [])
@@ -161,16 +170,16 @@ def render_site(site, preview=False, preview_token=None):
 <link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>
 <link href='{font_url}' rel='stylesheet'>
 <style>
-:root{{--accent:{accent};--bg:{bg};--wishfont:'{font_name}',Inter,Arial,sans-serif}}
+:root{{--accent:{accent};--bg:{bg};--titlefont:'{title_font}',serif;--messagefont:'{message_font}',Inter,Arial,sans-serif}}
 *{{box-sizing:border-box}}
 html{{scroll-behavior:smooth}}
-body{{margin:0;min-height:100vh;color:#fff;font-family:var(--wishfont);background:var(--bg);overflow-x:hidden}}
+body{{margin:0;min-height:100vh;color:#fff;font-family:var(--messagefont);background:var(--bg);overflow-x:hidden}}
 body:before{{content:'';position:fixed;inset:0;background:radial-gradient(circle at 50% 42%,rgba(255,255,255,.08),transparent 36%),radial-gradient(circle at 10% 15%,var(--accent),transparent 18%);opacity:.35;filter:blur(18px);animation:breathe 6s ease-in-out infinite;pointer-events:none}}
 .wrap{{position:relative;z-index:3;width:min(1040px,92vw);margin:0 auto;padding:90px 0 70px}}
 .card{{padding:clamp(34px,6vw,68px) clamp(20px,5vw,50px);text-align:center;border:1px solid rgba(255,255,255,.2);border-radius:32px;background:rgba(5,7,22,.30);backdrop-filter:blur(16px);box-shadow:0 28px 100px rgba(0,0,0,.45)}}
-h1{{margin:8px 0 18px;font-size:clamp(2.5rem,9vw,6.8rem);line-height:1.02;color:var(--accent);text-shadow:0 0 12px color-mix(in srgb,var(--accent) 70%,transparent),0 0 45px color-mix(in srgb,var(--accent) 45%,transparent)}}
+h1{{font-family:var(--titlefont);margin:8px 0 18px;font-size:clamp(2.5rem,9vw,6.8rem);line-height:1.02;color:var(--accent);text-shadow:0 0 12px color-mix(in srgb,var(--accent) 70%,transparent),0 0 45px color-mix(in srgb,var(--accent) 45%,transparent)}}
 .to{{font-family:Inter,Arial,sans-serif;font-size:.95rem;letter-spacing:.16em;text-transform:uppercase;opacity:.9}}
-.message{{white-space:pre-wrap;font-family:var(--wishfont);font-size:clamp(1.08rem,2.7vw,1.6rem);line-height:1.8;max-width:780px;margin:0 auto}}
+.message{{white-space:pre-wrap;font-family:var(--messagefont);font-size:clamp(1.08rem,2.7vw,1.6rem);line-height:1.8;max-width:780px;margin:0 auto}}
 .badge{{margin-top:32px;opacity:.72;font-family:Inter,Arial,sans-serif;font-size:.9rem}}
 .preview-banner{{position:fixed;z-index:20;top:0;left:0;right:0;padding:11px;text-align:center;background:rgba(0,0,0,.72);font-family:Inter,Arial,sans-serif;font-weight:700;letter-spacing:.05em}}
 .hero-photo{{margin:30px auto 0;width:min(520px,100%);padding:8px;border-radius:28px;background:linear-gradient(135deg,rgba(255,255,255,.7),var(--accent),rgba(255,255,255,.25));box-shadow:0 22px 70px rgba(0,0,0,.35)}}
@@ -180,7 +189,7 @@ h1{{margin:8px 0 18px;font-size:clamp(2.5rem,9vw,6.8rem);line-height:1.02;color:
 .gallery-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}}
 .gallery-grid img{{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:18px;border:1px solid rgba(255,255,255,.18);transition:transform .25s ease,box-shadow .25s ease}}
 .gallery-grid img:hover{{transform:translateY(-5px) scale(1.02);box-shadow:0 16px 35px rgba(0,0,0,.3)}}
-.video-section video{{display:block;width:100%;max-height:560px;border-radius:20px;background:#000;border:1px solid rgba(255,255,255,.15)}}
+.surprise,.letter{{margin:30px auto 0;max-width:720px}}.surprise button,.letter button,.celebrate{{border:0;border-radius:999px;padding:16px 26px;font-family:Inter,Arial,sans-serif;font-weight:800;font-size:1rem;cursor:pointer;background:linear-gradient(135deg,var(--accent),#fff);color:#111;box-shadow:0 15px 40px rgba(0,0,0,.28);transition:.25s}}.surprise button:hover,.letter button:hover,.celebrate:hover{{transform:translateY(-3px) scale(1.03)}}.secret,.letter-text{{display:none;margin-top:18px;padding:24px;border-radius:22px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);white-space:pre-wrap;animation:pop .5s ease both}}.surprise.open .secret,.letter.open .letter-text{{display:block}}.celebrate{{margin-top:26px}}.confetti-piece{{position:fixed;width:10px;height:16px;top:-20px;z-index:30;animation:fall 3.5s linear forwards}}@keyframes pop{{from{{opacity:0;transform:scale(.92)}}to{{opacity:1;transform:scale(1)}}}}@keyframes fall{{to{{transform:translateY(110vh) rotate(900deg);opacity:0}}}}.video-section video{{display:block;width:100%;max-height:560px;border-radius:20px;background:#000;border:1px solid rgba(255,255,255,.15)}}
 .float{{position:fixed;inset:auto 0 -20px 0;z-index:1;display:flex;justify-content:space-around;font-size:clamp(24px,4vw,56px);opacity:.75;animation:floatup 10s linear infinite;pointer-events:none}}
 .stars{{top:4%;bottom:auto;animation:twinkle 4s ease-in-out infinite alternate;word-spacing:4vw}}
 .hearts{{animation-duration:12s}}.lanterns{{animation-duration:16s}}
@@ -197,8 +206,8 @@ h1{{margin:8px 0 18px;font-size:clamp(2.5rem,9vw,6.8rem);line-height:1.02;color:
 </style>
 </head><body>
 {preview_banner}{particles}{stars}{hearts}{lanterns}{rain}{fireworks}
-<div class='wrap'><main class='card'>{recipient}<h1>{title}</h1><div class='message'>{message}</div>{photo_html}{video_html}<div class='badge'>✨ Created with WishVerse ✨</div></main></div>
-</body></html>""")
+<div class='wrap'><main class='card'>{recipient}<h1>{title}</h1><div class='message'>{message}</div>{photo_html}{video_html}{surprise_html}<div class='badge'>✨ Created with WishVerse ✨</div></main></div>
+<script>function revealSurprise(b){{b.parentElement.classList.toggle('open');b.textContent=b.parentElement.classList.contains('open')?'✨ Surprise Revealed!':'🎁 Click Here to Reveal Your Surprise'}}function openLetter(b){{b.parentElement.classList.toggle('open');b.textContent=b.parentElement.classList.contains('open')?'💖 Letter Opened':'💌 Open My Secret Letter'}}function celebrate(){{for(let i=0;i<90;i++){{let e=document.createElement('i');e.className='confetti-piece';e.style.left=Math.random()*100+'vw';e.style.transform='rotate('+Math.random()*360+'deg)';e.style.animationDelay=Math.random()*0.7+'s';e.style.background='hsl('+Math.random()*360+' 90% 65%)';document.body.appendChild(e);setTimeout(()=>e.remove(),4500)}}}}</script></body></html>""")
 
 @app.get("/s/{slug}", response_class=HTMLResponse)
 async def public_website(slug: str):

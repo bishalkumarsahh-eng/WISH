@@ -99,20 +99,36 @@ def theme_menu(page=0):
 
 def package_menu():
     return kb([
-        [InlineKeyboardButton(text="✨ Simple — 1 Photo", callback_data="package:simple")],
+        [InlineKeyboardButton(text="✨ Normal — Up to 4 Photos", callback_data="package:simple")],
         [InlineKeyboardButton(text="💎 Premium — Photos + Video", callback_data="package:premium")],
     ])
 
-def font_menu(package):
+def font_menu(package, kind="title"):
     fonts = PREMIUM_FONTS if package == "premium" else SIMPLE_FONTS
     rows = []
     items = list(fonts.items())
     for i in range(0, len(items), 2):
-        rows.append([InlineKeyboardButton(text=v[0], callback_data=f"font:{k}") for k, v in items[i:i+2]])
+        rows.append([InlineKeyboardButton(text=v[0], callback_data=f"font:{kind}:{k}") for k, v in items[i:i+2]])
     return kb(rows)
 
 def finish_photos_menu():
     return kb([[InlineKeyboardButton(text="✅ Done Adding Photos", callback_data="media:photos_done")]])
+
+def normal_extras_menu():
+    return kb([
+        [InlineKeyboardButton(text="🎁 Reveal Surprise", callback_data="extra:reveal")],
+        [InlineKeyboardButton(text="💌 Secret Message", callback_data="extra:letter")],
+        [InlineKeyboardButton(text="🎉 Celebration Effect", callback_data="extra:confetti")],
+        [InlineKeyboardButton(text="✨ Continue to Photos", callback_data="extra:done")],
+    ])
+
+def premium_extras_menu():
+    return kb([
+        [InlineKeyboardButton(text="🎁 Click to Reveal Surprise", callback_data="extra:reveal")],
+        [InlineKeyboardButton(text="💌 Secret Letter", callback_data="extra:letter")],
+        [InlineKeyboardButton(text="🎉 Confetti Celebration", callback_data="extra:confetti")],
+        [InlineKeyboardButton(text="✨ Finish Extras", callback_data="extra:done")],
+    ])
 
 async def get_draft(uid):
     user = await db.users.find_one({"telegram_id": uid}) or {}
@@ -137,7 +153,11 @@ async def create_site_from_draft(message, draft):
         "title": draft.get("title", ""),
         "message": draft.get("message", ""),
         "package": draft.get("package", "simple"),
-        "font": draft.get("font", "inter"),
+        "title_font": draft.get("title_font", "great_vibes" if draft.get("package") == "premium" else "playfair"),
+        "message_font": draft.get("message_font", "inter"),
+        "extras": draft.get("extras", []),
+        "surprise_text": draft.get("surprise_text", "A special surprise just for you! ✨"),
+        "letter_text": draft.get("letter_text", "You mean more to me than words can say. 💖"),
         "photo_file_ids": draft.get("photo_file_ids", []),
         "video_file_id": draft.get("video_file_id"),
         "published": False,
@@ -148,7 +168,7 @@ async def create_site_from_draft(message, draft):
 
     url = f"{BASE_URL}/preview/{slug}?token={token}"
     media_text = (
-        "📷 <b>Simple package:</b> up to 1 photo"
+        "📷 <b>Normal package:</b> up to 4 photos"
         if site["package"] == "simple"
         else f"💎 <b>Premium package:</b> {len(site['photo_file_ids'])} photo(s) + "
              f"{'1 video' if site.get('video_file_id') else 'no video'}"
@@ -156,7 +176,7 @@ async def create_site_from_draft(message, draft):
     await message.answer(
         f"🎉 <b>Your professional website is ready!</b>\n\n"
         f"{media_text}\n"
-        f"🔤 Font: <b>{(PREMIUM_FONTS if site['package']=='premium' else SIMPLE_FONTS).get(site['font'], ('Modern','Inter'))[0]}</b>\n\n"
+        f"🔤 Font: <b>{(PREMIUM_FONTS if site['package']=='premium' else SIMPLE_FONTS).get(site.get('title_font', 'inter'), ('Modern','Inter'))[0]}</b>\n\n"
         f"👀 Preview is private and expires in <b>{PREVIEW_MINUTES} minutes</b>.\n"
         f"🌐 Public sharing unlocks only after publishing.",
         reply_markup=kb([
@@ -225,13 +245,14 @@ async def choose_package(c):
     if not draft:
         return await c.answer("Please start creating again.", show_alert=True)
     draft["package"] = package
-    draft["step"] = "font"
+    draft["step"] = "title_font"
     await save_draft(c.from_user.id, draft)
 
     if package == "simple":
         text = (
-            "✨ <b>Simple Package selected</b>\n\n"
-            "Includes: beautiful theme + professional layout + 1 photo + selected font.\n"
+            "✨ <b>Normal Package selected</b>\n\n"
+            "Includes: beautiful theme + professional layout + up to 4 photos + separate title/message fonts "
+            "+ one surprise experience + one secret message + celebration effect.\n"
             "Publishing: 25⭐ / 50⭐ / 100⭐"
         )
     else:
@@ -245,47 +266,82 @@ async def choose_package(c):
 
 @dp.callback_query(F.data.startswith("font:"))
 async def choose_font(c):
-    font = c.data.split(":", 1)[1]
+    _, kind, font = c.data.split(":", 2)
     draft = await get_draft(c.from_user.id)
     if not draft:
         return await c.answer("Please start creating again.", show_alert=True)
     allowed = PREMIUM_FONTS if draft.get("package") == "premium" else SIMPLE_FONTS
     if font not in allowed:
         return await c.answer("This font is not available in your selected package.", show_alert=True)
-    draft["font"] = font
-    draft["step"] = "media"
-
-    if draft.get("package") == "simple":
-        draft["photo_file_ids"] = []
+    if kind == "title":
+        draft["title_font"] = font
+        draft["step"] = "message_font"
         await save_draft(c.from_user.id, draft)
-        await c.message.edit_text(
-            "📷 <b>Send one photo</b> for your website.\n\n"
-            "Or send <code>skip</code> if you don't want a photo."
-        )
+        await c.message.edit_text("💌 Now choose a DIFFERENT font for the wish/message text:", reply_markup=font_menu(draft.get("package"), "message"))
     else:
-        draft["photo_file_ids"] = []
+        draft["message_font"] = font
+        draft["step"] = "extras"
+        draft.setdefault("photo_file_ids", [])
         await save_draft(c.from_user.id, draft)
+        if draft.get("package") == "premium":
+            await c.message.edit_text("💎 Add premium interactive experiences! You can select multiple:", reply_markup=premium_extras_menu())
+        else:
+            await c.message.edit_text(
+                "✨ <b>Add attractive features to your Normal website</b>\n\n"
+                "You can include a reveal surprise, secret message and celebration effect. "
+                "Then continue to upload up to <b>4 photos</b>.",
+                reply_markup=normal_extras_menu()
+            )
+    await c.answer()
+
+@dp.callback_query(F.data.startswith("extra:"))
+async def premium_extra(c):
+    choice = c.data.split(":", 1)[1]
+    draft = await get_draft(c.from_user.id) or {}
+    extras = draft.setdefault("extras", [])
+    if choice == "done":
+        draft["step"] = "media"
+        draft.setdefault("photo_file_ids", [])
+        await save_draft(c.from_user.id, draft)
+        limit = 8 if draft.get("package") == "premium" else 4
+        label = "premium" if draft.get("package") == "premium" else "Normal"
         await c.message.edit_text(
-            "💎 <b>Send your premium photos</b>\n\n"
-            "You can send up to <b>8 photos</b>. Send them one by one, then tap <b>Done Adding Photos</b>.\n"
-            "You can also tap Done immediately to continue without photos.",
+            f"📷 <b>Send your {label} website photos</b>\n\n"
+            f"You can send up to <b>{limit} photos</b>. You can also tap Done Adding Photos whenever you finish.",
             reply_markup=finish_photos_menu()
         )
-    await c.answer()
+        return await c.answer()
+    if choice not in extras:
+        extras.append(choice)
+    draft["step"] = "extras"
+    await save_draft(c.from_user.id, draft)
+    if choice == "reveal":
+        await c.message.answer("🎁 Send the text that should appear after the visitor clicks <b>Reveal My Surprise</b>.")
+        draft["step"] = "surprise_text"
+    elif choice == "letter":
+        await c.message.answer("💌 Send the secret letter/message that opens when the visitor clicks it.")
+        draft["step"] = "letter_text"
+    await save_draft(c.from_user.id, draft)
+    await c.answer("Added!", show_alert=False)
 
 @dp.callback_query(F.data == "media:photos_done")
 async def photos_done(c):
     draft = await get_draft(c.from_user.id)
-    if not draft or draft.get("step") != "media" or draft.get("package") != "premium":
-        return await c.answer("No premium photo upload is active.", show_alert=True)
-    draft["step"] = "video"
-    await save_draft(c.from_user.id, draft)
-    await c.message.edit_text(
-        f"🎬 <b>Premium video section</b>\n\n"
-        f"Photos added: <b>{len(draft.get('photo_file_ids', []))}/8</b>\n\n"
-        "Now send <b>one video</b>, or send <code>skip</code> to finish without a video."
-    )
+    if not draft or draft.get("step") != "media":
+        return await c.answer("No photo upload is active.", show_alert=True)
+
+    if draft.get("package") == "premium":
+        draft["step"] = "video"
+        await save_draft(c.from_user.id, draft)
+        await c.message.edit_text(
+            f"🎬 <b>Premium video section</b>\n\n"
+            f"Photos added: <b>{len(draft.get('photo_file_ids', []))}/8</b>\n\n"
+            "Now send <b>one video</b>, or send <code>skip</code> to finish without a video."
+        )
+        return await c.answer()
+
     await c.answer()
+    await create_site_from_draft(c.message, draft)
 
 @dp.callback_query(F.data == "mywebsites")
 async def my_websites(c):
@@ -320,17 +376,27 @@ async def receive_photo(m):
         return
 
     photos = draft.get("photo_file_ids", [])
-    limit = 1 if draft.get("package") == "simple" else 8
+    limit = 4 if draft.get("package") == "simple" else 8
     if len(photos) >= limit:
         return await m.answer(f"⚠️ This package allows a maximum of {limit} photo(s).")
 
     photos.append(m.photo[-1].file_id)
     draft["photo_file_ids"] = photos
 
+    await save_draft(m.from_user.id, draft)
     if draft.get("package") == "simple":
-        await create_site_from_draft(m, draft)
+        if len(photos) >= 4:
+            await m.answer(
+                "📷 You reached the 4-photo limit. Your website is ready!",
+                reply_markup=finish_photos_menu()
+            )
+        else:
+            await m.answer(
+                f"✅ Photo added! <b>{len(photos)}/4</b>\n"
+                "Send another photo or tap Done Adding Photos.",
+                reply_markup=finish_photos_menu()
+            )
     else:
-        await save_draft(m.from_user.id, draft)
         if len(photos) >= 8:
             draft["step"] = "video"
             await save_draft(m.from_user.id, draft)
@@ -359,6 +425,18 @@ async def collect(m):
         return
 
     step = draft.get("step")
+    if step == "surprise_text":
+        draft["surprise_text"] = m.text[:1500]
+        draft["step"] = "extras"
+        await save_draft(m.from_user.id, draft)
+        return await m.answer("✨ Surprise text saved. Add another premium feature or finish:", reply_markup=premium_extras_menu())
+
+    if step == "letter_text":
+        draft["letter_text"] = m.text[:2500]
+        draft["step"] = "extras"
+        await save_draft(m.from_user.id, draft)
+        return await m.answer("💌 Secret letter saved. Add another premium feature or finish:", reply_markup=premium_extras_menu())
+
     if step == "recipient":
         draft["recipient_name"] = "" if m.text.strip().lower() == "skip" else m.text[:80]
         draft["step"] = "title"
@@ -377,8 +455,8 @@ async def collect(m):
         await save_draft(m.from_user.id, draft)
         return await m.answer(
             "📦 <b>Choose your website package</b>\n\n"
-            "✨ <b>Simple:</b> 1 photo, professional design, selected fonts.\n"
-            "💎 <b>Premium:</b> up to 8 photos, 1 video, more premium fonts and higher publishing value.",
+            "✨ <b>Normal:</b> up to 4 photos, separate fonts, surprise reveal, secret message and celebration effect.\n"
+            "💎 <b>Premium:</b> up to 8 photos, 1 video, premium fonts and multiple interactive experiences.",
             reply_markup=package_menu()
         )
 
