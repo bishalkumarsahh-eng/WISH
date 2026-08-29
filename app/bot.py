@@ -4,6 +4,7 @@ import secrets
 import re
 from datetime import datetime, timezone
 from aiogram import Bot, Dispatcher, F
+from aiogram.client.default import DefaultBotProperties
 from aiogram.filters import Command, CommandStart
 from aiogram.types import (
     Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton,
@@ -230,7 +231,10 @@ async def run_bot():
     if not BOT_TOKEN:
         logging.warning("BOT_TOKEN is missing. Bot is disabled.")
         return
-    bot = Bot(BOT_TOKEN, parse_mode="HTML")
+    bot = Bot(
+        token=BOT_TOKEN,
+        default=DefaultBotProperties(parse_mode="HTML")
+    )
     await dp.start_polling(bot)
 
 def start_bot_background():
