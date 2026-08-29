@@ -291,7 +291,7 @@ def render_premium_story(site, preview=False, preview_token=None):
 .wx-gate-card{{width:min(560px,90vw);padding:42px 28px;text-align:center;border:1px solid #ffffff28;border-radius:32px;background:#ffffff10;backdrop-filter:blur(24px);box-shadow:0 30px 100px #0009}}
 .wx-gate-card .wx-orb{{font-size:72px;filter:drop-shadow(0 0 30px var(--accent,#ff8fb9));animation:wxPulse 2.4s ease-in-out infinite}}
 .wx-gate-card h2{{margin:8px 0;font-size:clamp(28px,7vw,52px)}} .wx-gate-card p{{opacity:.75;line-height:1.7}}
-#wx-song{{display:none}}
+#wx-song{{position:fixed;width:1px;height:1px;left:-10000px;top:-10000px;opacity:.01;pointer-events:none}}
 #wx-music{{position:fixed;left:14px;bottom:14px;z-index:9997;border:1px solid #ffffff2a;border-radius:999px;padding:11px 14px;background:#090711b8;color:#fff;backdrop-filter:blur(14px);cursor:pointer;font-weight:800;box-shadow:0 8px 30px #0005}}
 #wx-enter{{border:0;border-radius:999px;padding:16px 28px;font-weight:900;font-size:16px;cursor:pointer;background:linear-gradient(135deg,#fff,var(--accent,#ff8fb9));color:#151018;box-shadow:0 15px 45px #0006}}
 @keyframes wxPulse{{50%{{transform:scale(1.08) rotate(3deg)}}}}
@@ -314,9 +314,19 @@ function event(name){{if(!apiEnabled)return;fetch('/api/site/'+slug+'/event',{{m
 function track(){{const active=document.querySelector('.screen.active');if(!active)return;const i=Math.max(0,screens.indexOf(active));bar.style.width=((i+1)/Math.max(1,screens.length)*100)+'%';event('chapter_'+active.id)}}
 function spark(x,y){{for(let i=0;i<7;i++){{const e=document.createElement('i');e.className='wx-spark';e.style.left=x+'px';e.style.top=y+'px';e.style.setProperty('--dx',(Math.random()*90-45)+'px');e.style.setProperty('--dy',(Math.random()*90-45)+'px');document.body.appendChild(e);setTimeout(()=>e.remove(),900)}}}}
 const song=document.getElementById('wx-song'),musicBtn=document.getElementById('wx-music');
-async function startSong(withSound=false){{if(!song)return false;try{{song.load();song.muted=!withSound;await song.play();if(withSound)song.muted=false;musicBtn.style.display='block';musicBtn.textContent=withSound?'🎵 Music: ON':'🔇 Music: TAP TO UNMUTE';return true}}catch(e){{musicBtn.style.display='block';musicBtn.textContent='🎵 Tap to Play';return false}}}}
-if(song){{musicBtn.onclick=async()=>{{if(song.paused){{await startSong(true)}}else{{song.pause();musicBtn.textContent='🔇 Music: OFF'}}}};startSong(false);}}
-document.getElementById('wx-enter').onclick=async()=>{{gate.classList.add('hide');if(song){{const ok=await startSong(true);if(!ok){{musicBtn.style.display='block';musicBtn.textContent='🎵 Tap to Play'}}}}event('experience_opened');track();toastMsg('✨ Experience unlocked')}};
+let songStarted=false;
+async function startSong(withSound=false){{if(!song)return false;try{{if(song.readyState===0){{song.load();}}song.muted=!withSound;const p=song.play();if(p)await p;if(withSound){{song.muted=false;}}songStarted=true;musicBtn.style.display='block';musicBtn.textContent=withSound?'🎵 Music: ON':'🔇 Music: TAP TO UNMUTE';return true}}catch(e){{musicBtn.style.display='block';musicBtn.textContent='🎵 Tap to Play';return false}}}}
+if(song){{
+  song.volume=0.85;
+  song.addEventListener('error',()=>{{musicBtn.style.display='block';musicBtn.textContent='⚠️ Music unavailable'}});
+  musicBtn.onclick=async()=>{{if(song.paused){{await startSong(true)}}else{{song.pause();musicBtn.textContent='🔇 Music: OFF'}}}};
+  // Prime muted playback where the browser permits it, but never reload the
+  // element after the user's gesture because that can interrupt playback.
+  startSong(false);
+}}
+const enterExperience=document.getElementById('wx-enter');
+enterExperience.addEventListener('pointerdown',()=>{{if(song && song.paused){{startSong(true)}}}},{{passive:true}});
+enterExperience.onclick=async()=>{{gate.classList.add('hide');if(song){{const ok=await startSong(true);if(!ok){{musicBtn.style.display='block';musicBtn.textContent='🎵 Tap to Play'}}}}event('experience_opened');track();toastMsg('✨ Experience unlocked')}};
 document.getElementById('wx-replay').onclick=()=>location.reload();
 document.getElementById('wx-full').onclick=()=>{{document.documentElement.requestFullscreen?.();event('fullscreen')}};
 document.getElementById('wx-share').onclick=async()=>{{try{{if(navigator.share){{await navigator.share({{title:document.title,text:'A special wish was made for you ✨',url:location.href}})}}else{{await navigator.clipboard.writeText(location.href)}}event('shared');toastMsg('🔗 Share link ready')}}catch(e){{}}}};
