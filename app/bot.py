@@ -303,7 +303,7 @@ async def create_site_from_draft(message, draft):
         "photo_file_ids": draft.get("photo_file_ids", []),
         "video_file_id": draft.get("video_file_id"),
         "song_file_id": draft.get("song_file_id"),
-        "song_mime_type": draft.get("song_mime_type", "audio/mpeg"),
+        "song_mime_type": (draft.get("song_mime_type") or "audio/mpeg").lower(),
         "published": False,
         "created_at": datetime.now(timezone.utc),
     }
@@ -739,7 +739,7 @@ async def receive_audio(m):
     if not draft or draft.get("step") != "audio" or draft.get("package") != "premium":
         return
     draft["song_file_id"] = m.audio.file_id
-    draft["song_mime_type"] = m.audio.mime_type or "audio/mpeg"
+    draft["song_mime_type"] = (m.audio.mime_type or "audio/mpeg").lower()
     await create_site_from_draft(m, draft)
 
 @dp.message(F.text & ~F.text.startswith("/"))
