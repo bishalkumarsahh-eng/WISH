@@ -47,6 +47,35 @@ PREMIUM_THEME_CONFIG = {
     "festival_lantern": {"name":"🏮 Festival Lanterns","category":"festival","accent":"#ffb35c","bg":"linear-gradient(135deg,#1a0710,#4b1720,#7a3420)","emoji":"🏮"},
     "festival_lights": {"name":"✨ Festival Lights","category":"festival","accent":"#ffe36e","bg":"linear-gradient(135deg,#171229,#42304d,#725d2c)","emoji":"✨"},
     "custom_cinematic": {"name":"🎬 Cinematic Story","category":"custom","accent":"#9f7cff","bg":"linear-gradient(135deg,#07051a,#22134a,#381f65)","emoji":"🎬"},
+
+    # Expanded premium visual collection: each option has a different atmosphere, not just stars.
+    "birthday_flower_garden": {"name":"🌸 Pink Flower Garden","category":"birthday","accent":"#ff8fbd","bg":"linear-gradient(135deg,#ffe3f0,#ffb6d2,#c8a7ff)","emoji":"🌸","scene":"flower_petals"},
+    "birthday_candy": {"name":"🍭 Candy Dream Party","category":"birthday","accent":"#ff5e9e","bg":"linear-gradient(135deg,#ff8fbd,#ffd0a8,#a9d7ff)","emoji":"🍭","scene":"candy_bubbles"},
+    "birthday_sunrise": {"name":"🌅 Sunrise Celebration","category":"birthday","accent":"#ffb15a","bg":"linear-gradient(180deg,#ffb36b,#ff7f8a,#7b5cff)","emoji":"🌅","scene":"sunrise_glow"},
+    "birthday_butterfly": {"name":"🦋 Butterfly Paradise","category":"birthday","accent":"#9f7cff","bg":"linear-gradient(135deg,#b6f0e5,#cbb9ff,#ffb8d5)","emoji":"🦋","scene":"butterflies"},
+    "valentine_pink_garden": {"name":"🌷 Pink Love Garden","category":"valentine","accent":"#ff6f9f","bg":"linear-gradient(135deg,#ffd8e8,#ff9fc6,#b889c8)","emoji":"🌷","scene":"flower_petals"},
+    "valentine_candle": {"name":"🕯 Candlelight Romance","category":"valentine","accent":"#ffd38b","bg":"linear-gradient(135deg,#3b1720,#7a3540,#241018)","emoji":"🕯","scene":"candle_glow"},
+    "valentine_cherry": {"name":"🌸 Cherry Blossom Love","category":"valentine","accent":"#ff9fc9","bg":"linear-gradient(135deg,#ffcfdf,#d6a5c7,#8c7ab8)","emoji":"🌸","scene":"cherry_blossoms"},
+    "anniversary_flower": {"name":"💐 Forever Bloom","category":"anniversary","accent":"#ffc1da","bg":"linear-gradient(135deg,#7c3b5b,#d9789b,#ffd0dc)","emoji":"💐","scene":"flower_petals"},
+    "anniversary_beach": {"name":"🏝 Golden Beach Memories","category":"anniversary","accent":"#ffe39a","bg":"linear-gradient(180deg,#f7a86b,#f5d9a6,#4fa4c7)","emoji":"🏝","scene":"ocean_waves"},
+    "anniversary_twilight": {"name":"🌆 Twilight Date","category":"anniversary","accent":"#c7b3ff","bg":"linear-gradient(135deg,#3e315c,#8d5b8f,#f49c9c)","emoji":"🌆","scene":"city_glow"},
+    "friendship_sunset": {"name":"🌅 Friendship Sunset","category":"friendship","accent":"#ffcc7a","bg":"linear-gradient(135deg,#ff8f70,#ffcf80,#7bc4d3)","emoji":"🌅","scene":"sunrise_glow"},
+    "friendship_flower": {"name":"🌼 Happy Flower Field","category":"friendship","accent":"#ffd25f","bg":"linear-gradient(135deg,#8ed6a7,#d6f39d,#ffda8a)","emoji":"🌼","scene":"flower_petals"},
+    "friendship_arcade": {"name":"🕹 Retro Fun World","category":"friendship","accent":"#67e8f9","bg":"linear-gradient(135deg,#2b145c,#075985,#db2777)","emoji":"🕹","scene":"retro_grid"},
+    "congrats_confetti": {"name":"🎊 Grand Confetti","category":"congratulations","accent":"#ffe56d","bg":"linear-gradient(135deg,#5b2c83,#f25f8b,#ffb15a)","emoji":"🎊","scene":"confetti_party"},
+    "congrats_spotlight": {"name":"🎤 Spotlight Moment","category":"congratulations","accent":"#fff2a6","bg":"radial-gradient(circle at center,#6b4b10,#1a1208 55%,#050505)","emoji":"🎤","scene":"spotlights"},
+    "congrats_trophy": {"name":"🥇 Champions Stage","category":"congratulations","accent":"#ffd45c","bg":"linear-gradient(135deg,#281d04,#715312,#1c1607)","emoji":"🥇","scene":"golden_sparkles"},
+    "surprise_gift_room": {"name":"🎀 Pink Gift Room","category":"surprise","accent":"#ff8fb9","bg":"linear-gradient(135deg,#ffb6d3,#d99aff,#6f6bba)","emoji":"🎀","scene":"gift_ribbons"},
+    "surprise_balloons": {"name":"🎈 Floating Surprise","category":"surprise","accent":"#ffffff","bg":"linear-gradient(135deg,#ff7bac,#9c7bff,#66c7ff)","emoji":"🎈","scene":"balloons"},
+    "surprise_ocean": {"name":"🐚 Secret Ocean","category":"surprise","accent":"#83e7ff","bg":"linear-gradient(180deg,#0b7189,#1c9db7,#082c4c)","emoji":"🐚","scene":"ocean_waves"},
+    "festival_flower": {"name":"🌺 Festival of Flowers","category":"festival","accent":"#ffcc7a","bg":"linear-gradient(135deg,#ff6f91,#ffb86b,#8d63d8)","emoji":"🌺","scene":"flower_petals"},
+    "festival_holi": {"name":"🎨 Color Splash Festival","category":"festival","accent":"#ffffff","bg":"linear-gradient(135deg,#ff4f8b,#ffcc4d,#4ad7c5,#7b68ee)","emoji":"🎨","scene":"color_splash"},
+    "festival_spring": {"name":"🌿 Spring Evening","category":"festival","accent":"#d9ff8a","bg":"linear-gradient(135deg,#285943,#6ea85b,#f4d48b)","emoji":"🌿","scene":"fireflies"},
+    "custom_pink_luxe": {"name":"💗 Pink Luxury","category":"custom","accent":"#ffd0df","bg":"linear-gradient(135deg,#3c1127,#9d3c67,#e978a0)","emoji":"💗","scene":"silk_glow"},
+    "custom_nature": {"name":"🍃 Enchanted Nature","category":"custom","accent":"#b8ffb1","bg":"linear-gradient(135deg,#12352c,#286a49,#79a75b)","emoji":"🍃","scene":"fireflies"},
+    "custom_clouds": {"name":"☁️ Dreamy Clouds","category":"custom","accent":"#ffffff","bg":"linear-gradient(180deg,#7eb9ee,#b9d8f5,#f7b8d0)","emoji":"☁️","scene":"floating_clouds"},
+    "custom_marble": {"name":"🪞 Rose Marble Luxe","category":"custom","accent":"#f4d7c6","bg":"linear-gradient(135deg,#5c3d4d,#b67c8f,#e9c5b7)","emoji":"🪞","scene":"marble_glow"},
+
 }
 
 
