@@ -699,10 +699,8 @@ async def receive_video(m):
     draft["video_file_id"] = m.video.file_id
     await create_site_from_draft(m, draft)
 
-@dp.message(F.text)
+@dp.message(F.text & ~F.text.startswith("/"))
 async def collect(m):
-    if m.text.startswith("/"):
-        return
     draft = await get_draft(m.from_user.id)
     if not draft:
         return
