@@ -1,85 +1,50 @@
-# WishVerse Professional Media + Fonts
+# WishVerse — Normal + Premium Website Maker
 
-## New packages
+## Packages
+### ✨ Normal (paid)
+- Up to 4 photos
+- Separate title and message fonts
+- Animated/static background themes
+- Reveal surprise
+- Secret letter
+- Celebration/confetti
+- Telegram Stars publishing
 
-### ✨ Simple Package
-- 1 optional photo
-- Professional layout
-- 4 professional font choices
-- Publishing prices:
-  - 25 Telegram Stars → 2 hours
-  - 50 Telegram Stars → 15 hours
-  - 100 Telegram Stars → permanent
-
-### 💎 Premium Package
+### 💎 Premium (paid)
 - Up to 8 photos
 - 1 optional video
-- All simple fonts plus luxury and script fonts
-- Publishing prices:
-  - 50 Telegram Stars → 2 hours
-  - 100 Telegram Stars → 15 hours
-  - 200 Telegram Stars → permanent
+- Full interactive story website
+- Category-specific Premium theme selection
+- Each theme now has its own animated background scene: balloons, party, shooting stars, rose petals, neon hearts, romantic sky, golden sparkles, polaroid glow, bubbles, confetti, fireworks, mystic fog, magic portal, lanterns, fairy lights, aurora and more.
+- Premium fonts and interactive chapters
 
-## Media privacy
-Telegram files are served through the WishVerse backend. The bot token is never exposed in the generated website HTML.
-
-## Free publishing
-- `OWNER_ID` publishes permanently for free.
-- `/grantfree USER_ID` grants another user permanent free publishing.
-- `/revokefree USER_ID` removes free publishing.
-
-## Heroku
-Scale:
-- web = 1
-- worker = 1
-
-Required Config Vars:
-- BOT_TOKEN
-- OWNER_ID
-- MONGO_URI
-- BASE_URL
-- SECRET_KEY
-- PREVIEW_MINUTES=2
-
-
-## Fix in this version
-This release fixes the preview/public website 500 error caused by MongoDB datetime timezone comparisons. Existing MongoDB records are supported too.
-
-
-## Rich package update
-### Normal (paid)
-- Up to 4 photos
-- Separate title and wish/message fonts
-- Reveal surprise
-- Secret message/letter
-- Celebration/confetti effect
-- Beautiful themes, animated effects and professional layouts
+## Publishing prices
+### Normal
+- 25 ⭐ → 2 hours
+- 50 ⭐ → 15 hours
+- 100 ⭐ → permanent
 
 ### Premium
-- Up to 8 photos
-- 1 video
-- Larger premium font collection
-- Multiple interactive experiences
-- Reveal surprise, secret letter and celebration effect
-- Rich gallery and premium media presentation
+- 50 ⭐ → 2 hours
+- 100 ⭐ → 15 hours
+- 200 ⭐ → permanent
 
+## Owner commands
+- `/grantfree USER_ID` — give permanent free publishing
+- `/revokefree USER_ID` — remove free publishing
+- `/freeusers` — list users with free access
 
-## Publish fix
-This version fixes false "Website not found" errors when pressing Publish by:
-- Looking up the website by slug first
-- Checking ownership separately
-- Supporting timezone-safe publish expiry checks
-- Verifying the website update after a successful Telegram Stars payment
+## Required Heroku Config Vars
+- `BOT_TOKEN`
+- `OWNER_ID` — numeric Telegram user ID of the bot owner. Without this, owner commands will not work.
+- `LOG_GROUP_ID` — optional numeric logger group ID, usually starting with `-100`
+- `MONGO_URI`
+- `BASE_URL` — full Heroku domain, for example `https://your-app.herokuapp.com`
+- `SECRET_KEY`
+- `PREVIEW_MINUTES=2`
 
+## Telegram Stars
+Payments use Telegram Stars with currency `XTR`. `provider_token` is intentionally empty for Stars. A website is published only after Telegram sends a verified `successful_payment` update and the payload/amount/user are checked.
 
-## Premium Interactive Theme Experience
-Premium users now choose a complete website experience:
-- Midnight Universe
-- Luxury Birthday
-- Romantic Love Story
-- Soft Aesthetic
-- Royal Luxury
-- Party Celebration
-- Memory Journey
-
-Premium pages include an interactive journey structure with surprise cards, secret letter, make-a-wish interaction, clickable stars and cinematic finale. Normal package remains unchanged.
+## Logger group
+Add the bot to your private logger group and set `LOG_GROUP_ID`. The bot logs successful payments, free publishing, granting access and revoking access.
