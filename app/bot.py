@@ -4,7 +4,7 @@ import secrets
 from datetime import datetime, timezone, timedelta
 
 from aiogram import Bot, Dispatcher, F
-from aiogram.exceptions import TelegramBadRequest
+from aiogram.exceptions import TelegramBadRequest, TelegramNetworkError
 from aiogram.client.default import DefaultBotProperties
 from aiogram.filters import Command, CommandStart
 from aiogram.types import (
@@ -44,13 +44,28 @@ def as_utc(value):
     return value.astimezone(timezone.utc)
 
 async def safe_edit(message, text, reply_markup=None, **kwargs):
-    """Edit a Telegram message without crashing on an idempotent edit."""
-    try:
-        return await message.edit_text(text, reply_markup=reply_markup, **kwargs)
-    except TelegramBadRequest as exc:
-        if "message is not modified" in str(exc).lower():
-            return None
-        raise
+    """Reliably edit a Telegram message without crashing on harmless/transient errors."""
+    last_error = None
+    for attempt in range(4):
+        try:
+            return await message.edit_text(text, reply_markup=reply_markup, **kwargs)
+        except TelegramBadRequest as exc:
+            if "message is not modified" in str(exc).lower():
+                return None
+            raise
+        except TelegramNetworkError as exc:
+            last_error = exc
+            if attempt >= 3:
+                log.warning("Telegram edit failed after retries: %s", exc)
+                return None
+            await asyncio.sleep(0.8 * (2 ** attempt))
+        except (ConnectionError, TimeoutError) as exc:
+            last_error = exc
+            if attempt >= 3:
+                log.warning("Telegram edit connection failed after retries: %s", exc)
+                return None
+            await asyncio.sleep(0.8 * (2 ** attempt))
+    return None
 
 def kb(rows):
     return InlineKeyboardMarkup(inline_keyboard=rows)
