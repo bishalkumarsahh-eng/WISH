@@ -44,3 +44,21 @@ Required Config Vars:
 
 ## Fix in this version
 This release fixes the preview/public website 500 error caused by MongoDB datetime timezone comparisons. Existing MongoDB records are supported too.
+
+
+## Rich package update
+### Normal (paid)
+- Up to 4 photos
+- Separate title and wish/message fonts
+- Reveal surprise
+- Secret message/letter
+- Celebration/confetti effect
+- Beautiful themes, animated effects and professional layouts
+
+### Premium
+- Up to 8 photos
+- 1 video
+- Larger premium font collection
+- Multiple interactive experiences
+- Reveal surprise, secret letter and celebration effect
+- Rich gallery and premium media presentation
