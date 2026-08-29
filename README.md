@@ -48,3 +48,11 @@ Payments use Telegram Stars with currency `XTR`. `provider_token` is intentional
 
 ## Logger group
 Add the bot to your private logger group and set `LOG_GROUP_ID`. The bot logs successful payments, free publishing, granting access and revoking access.
+
+
+## Ultra Creator V7
+- Ultra Creator Lab with advanced guided controls
+- Analytics dashboard and per-site analytics
+- Share Kit for published websites
+- Enhanced Website Manager controls
+- Inline-button-first experience plus /ultra and /analytics commands
