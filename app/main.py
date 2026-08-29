@@ -5,7 +5,7 @@ from urllib.parse import quote
 import httpx
 
 from fastapi import FastAPI, HTTPException, Response, Query, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from .config import BOT_TOKEN, PREVIEW_SECONDS
 from .db import db, setup_indexes
 from .themes import THEMES, PREMIUM_THEME_CONFIG
@@ -130,14 +130,27 @@ async def site_video(slug: str, token: str | None = Query(default=None)):
 
 @app.get("/media/{slug}/audio")
 async def site_audio(slug: str, token: str | None = Query(default=None)):
+    # Audio is intentionally a dedicated endpoint so the browser can request
+    # the song independently of the HTML document.  It works for both preview
+    # (token protected) and published premium websites.
     site = await authorized_site(slug, token)
     file_id = site.get("song_file_id")
     if not file_id:
         raise HTTPException(404, "Song not found")
     content, content_type = await get_media_bytes(file_id)
-    if content_type == "application/octet-stream":
+    stored_type = site.get("song_mime_type")
+    if stored_type and stored_type.startswith("audio/"):
+        content_type = stored_type
+    if not content_type or content_type == "application/octet-stream":
         content_type = "audio/mpeg"
-    return Response(content=content, media_type=content_type, headers={"Cache-Control": "public, max-age=3600"})
+    # Returning Accept-Ranges makes playback more reliable on mobile Safari,
+    # Chrome and Telegram's in-app browser.
+    headers = {
+        "Cache-Control": "public, max-age=3600",
+        "Accept-Ranges": "bytes",
+        "Content-Disposition": "inline",
+    }
+    return Response(content=content, media_type=content_type, headers=headers)
 
 
 def render_premium_story_legacy(site, preview=False, preview_token=None):
@@ -301,8 +314,9 @@ function event(name){{if(!apiEnabled)return;fetch('/api/site/'+slug+'/event',{{m
 function track(){{const active=document.querySelector('.screen.active');if(!active)return;const i=Math.max(0,screens.indexOf(active));bar.style.width=((i+1)/Math.max(1,screens.length)*100)+'%';event('chapter_'+active.id)}}
 function spark(x,y){{for(let i=0;i<7;i++){{const e=document.createElement('i');e.className='wx-spark';e.style.left=x+'px';e.style.top=y+'px';e.style.setProperty('--dx',(Math.random()*90-45)+'px');e.style.setProperty('--dy',(Math.random()*90-45)+'px');document.body.appendChild(e);setTimeout(()=>e.remove(),900)}}}}
 const song=document.getElementById('wx-song'),musicBtn=document.getElementById('wx-music');
-if(song){{musicBtn.style.display='block';musicBtn.onclick=async()=>{{if(song.paused){{try{{await song.play();song.muted=false;musicBtn.textContent='🎵 Music: ON'}}catch(e){{}}}}else{{song.pause();musicBtn.textContent='🔇 Music: OFF'}}}};try{{song.muted=true;await song.play()}}catch(e){{}}}}
-document.getElementById('wx-enter').onclick=async()=>{{gate.classList.add('hide');if(song){{try{{song.muted=false;await song.play();musicBtn.textContent='🎵 Music: ON'}}catch(e){{musicBtn.textContent='🔇 Tap Music to Play'}}}}event('experience_opened');track();toastMsg('✨ Experience unlocked')}};
+async function startSong(withSound=false){{if(!song)return false;try{{song.load();song.muted=!withSound;await song.play();if(withSound)song.muted=false;musicBtn.style.display='block';musicBtn.textContent=withSound?'🎵 Music: ON':'🔇 Music: TAP TO UNMUTE';return true}}catch(e){{musicBtn.style.display='block';musicBtn.textContent='🎵 Tap to Play';return false}}}}
+if(song){{musicBtn.onclick=async()=>{{if(song.paused){{await startSong(true)}}else{{song.pause();musicBtn.textContent='🔇 Music: OFF'}}}};startSong(false);}}
+document.getElementById('wx-enter').onclick=async()=>{{gate.classList.add('hide');if(song){{const ok=await startSong(true);if(!ok){{musicBtn.style.display='block';musicBtn.textContent='🎵 Tap to Play'}}}}event('experience_opened');track();toastMsg('✨ Experience unlocked')}};
 document.getElementById('wx-replay').onclick=()=>location.reload();
 document.getElementById('wx-full').onclick=()=>{{document.documentElement.requestFullscreen?.();event('fullscreen')}};
 document.getElementById('wx-share').onclick=async()=>{{try{{if(navigator.share){{await navigator.share({{title:document.title,text:'A special wish was made for you ✨',url:location.href}})}}else{{await navigator.clipboard.writeText(location.href)}}event('shared');toastMsg('🔗 Share link ready')}}catch(e){{}}}};

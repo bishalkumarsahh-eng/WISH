@@ -288,6 +288,7 @@ async def create_site_from_draft(message, draft):
         "photo_file_ids": draft.get("photo_file_ids", []),
         "video_file_id": draft.get("video_file_id"),
         "song_file_id": draft.get("song_file_id"),
+        "song_mime_type": draft.get("song_mime_type", "audio/mpeg"),
         "published": False,
         "created_at": datetime.now(timezone.utc),
     }
@@ -650,7 +651,7 @@ async def duplicate_site(c):
     slug=c.data.split(":",1)[1]
     site,err=await get_owned_site(slug,c.from_user.id)
     if err: return await c.answer("Website not found.", show_alert=True)
-    draft={k:site.get(k) for k in ["type","package","theme","opening_style","recipient_name","title","message","title_font","message_font","extras","event_date","surprise_text","letter_text","photo_file_ids","video_file_id","song_file_id"]}
+    draft={k:site.get(k) for k in ["type","package","theme","opening_style","recipient_name","title","message","title_font","message_font","extras","event_date","surprise_text","letter_text","photo_file_ids","video_file_id","song_file_id","song_mime_type"]}
     draft["title"]=(site.get("title") or "Untitled")+" (Copy)"; draft["step"]="extras"
     await save_draft(c.from_user.id,draft)
     await safe_edit(c.message, "📋 <b>Website copied to a new draft.</b>\n\nYou can now continue with features and media without changing the original website.", reply_markup=premium_extras_menu() if draft.get('package')=='premium' else normal_extras_menu())
@@ -723,6 +724,7 @@ async def receive_audio(m):
     if not draft or draft.get("step") != "audio" or draft.get("package") != "premium":
         return
     draft["song_file_id"] = m.audio.file_id
+    draft["song_mime_type"] = m.audio.mime_type or "audio/mpeg"
     await create_site_from_draft(m, draft)
 
 @dp.message(F.text & ~F.text.startswith("/"))
