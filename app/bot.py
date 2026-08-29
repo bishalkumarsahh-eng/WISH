@@ -21,6 +21,13 @@ dp = Dispatcher()
 def is_owner(uid):
     return bool(OWNER_ID and uid == OWNER_ID)
 
+def as_utc(value):
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
 def kb(rows):
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -290,7 +297,7 @@ async def my_websites(c):
         now = datetime.now(timezone.utc)
         for d in docs:
             live = bool(d.get("published"))
-            expires = d.get("published_expires_at")
+            expires = as_utc(d.get("published_expires_at"))
             if live and not d.get("is_permanent") and expires and expires <= now:
                 live = False
             if live:

@@ -1,7 +1,14 @@
+from datetime import timezone
 from motor.motor_asyncio import AsyncIOMotorClient
 from .config import MONGO_URI
 
-client = AsyncIOMotorClient(MONGO_URI) if MONGO_URI else None
+# tz_aware=True is important because website preview/publish expiry times are
+# stored in MongoDB and compared against timezone-aware UTC datetimes.
+client = (
+    AsyncIOMotorClient(MONGO_URI, tz_aware=True, tzinfo=timezone.utc)
+    if MONGO_URI
+    else None
+)
 db = client["wishverse"] if client else None
 
 async def setup_indexes():

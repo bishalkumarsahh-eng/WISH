@@ -41,10 +41,19 @@ async def health():
 async def favicon():
     return Response(status_code=204)
 
+def as_utc(value):
+    if value is None:
+        return None
+    # Defensive support for websites created by older deployments where
+    # MongoDB datetimes may be returned without tzinfo.
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
 def is_preview_valid(site, token):
     if not token or site.get("preview_token") != token:
         return False
-    expires = site.get("preview_expires_at")
+    expires = as_utc(site.get("preview_expires_at"))
     return bool(expires and expires > datetime.now(timezone.utc))
 
 async def get_media_bytes(file_id):
@@ -74,7 +83,7 @@ async def authorized_site(slug, token=None):
     if not site.get("published"):
         raise HTTPException(404, "Website not published")
     if not site.get("is_permanent"):
-        expires = site.get("published_expires_at")
+        expires = as_utc(site.get("published_expires_at"))
         now = datetime.now(timezone.utc)
         if not expires or expires <= now:
             await db.websites.update_one({"_id": site["_id"]}, {"$set": {"published": False, "expired_at": now}})
