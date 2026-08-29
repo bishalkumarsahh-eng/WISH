@@ -249,7 +249,8 @@ async def save_draft(uid, draft):
 async def create_site_from_draft(message, draft):
     slug = secrets.token_urlsafe(8).replace("-", "").replace("_", "")
     token = secrets.token_urlsafe(24)
-    expires = datetime.now(timezone.utc) + timedelta(minutes=PREVIEW_MINUTES)
+    # The 2-minute preview countdown starts when the preview link is first opened.
+    expires = None
 
     site = {
         "slug": slug,
@@ -269,6 +270,9 @@ async def create_site_from_draft(message, draft):
         "extras": draft.get("extras", []),
         "event_date": draft.get("event_date"),
         "reactions": {},
+        "reaction_counts": {},
+        "event_counts": {},
+        "guestbook_count": 0,
         "surprise_text": draft.get("surprise_text", "A special surprise just for you! ✨"),
         "letter_text": draft.get("letter_text", "You mean more to me than words can say. 💖"),
         "photo_file_ids": draft.get("photo_file_ids", []),
@@ -290,10 +294,10 @@ async def create_site_from_draft(message, draft):
         f"🎉 <b>Your professional website is ready!</b>\n\n"
         f"{media_text}\n"
         f"🔤 Font: <b>{(PREMIUM_FONTS if site['package']=='premium' else SIMPLE_FONTS).get(site.get('title_font', 'inter'), ('Modern','Inter'))[0]}</b>\n\n"
-        f"👀 Preview is private and expires in <b>{PREVIEW_MINUTES} minutes</b>.\n"
+        f"👀 Preview is private and stays active for <b>{PREVIEW_MINUTES} minutes after first opening</b>.\n"
         f"🌐 Public sharing unlocks only after publishing.",
         reply_markup=kb([
-            [InlineKeyboardButton(text="👀 Preview (2 min)", url=url)],
+            [InlineKeyboardButton(text="👀 Open Preview • 2 min", url=url)],
             [InlineKeyboardButton(text="🚀 Publish Website", callback_data=f"publish:{slug}")]
         ])
     )
@@ -1195,7 +1199,15 @@ async def analytics_site_cb(c):
     if err:return await c.answer("Website not found.",show_alert=True)
     created=site.get("created_at")
     last=site.get("last_viewed_at")
-    await c.message.edit_text(f"📈 <b>Website Analytics</b>\n\n📝 <b>{site.get('title','Untitled')}</b>\n👁 Total views: <b>{site.get('views',0)}</b>\n🕒 Last view: <code>{last or 'No visitor yet'}</code>\n📅 Created: <code>{created or 'Unknown'}</code>\n\nAnalytics are counted automatically when the public website is opened.", reply_markup=kb([[InlineKeyboardButton(text="⬅️ Website Manager",callback_data=f"manage:{slug}")]]))
+    events=site.get("event_counts", {}) or {}
+    reactions=site.get("reaction_counts", {}) or {}
+    opens=int(events.get("experience_opened",0) or 0)
+    finale=int(events.get("finale_unlocked",0) or 0)
+    photos=int(events.get("photo_opened",0) or 0)
+    shared=int(events.get("shared",0) or 0)
+    reaction_total=sum(int(v or 0) for v in reactions.values())
+    analytics_text=(f"📈 <b>Website Analytics</b>\n\n📝 <b>{site.get('title','Untitled')}</b>\n👁 Total views: <b>{site.get('views',0)}</b>\n✨ Experience opens: <b>{opens}</b>\n🏁 Finales unlocked: <b>{finale}</b>\n📸 Photos opened: <b>{photos}</b>\n↗ Shares: <b>{shared}</b>\n💬 Guestbook entries: <b>{site.get('guestbook_count',0)}</b>\n💖 Reactions: <b>{reaction_total}</b>\n🕒 Last view: <code>{last or 'No visitor yet'}</code>\n📅 Created: <code>{created or 'Unknown'}</code>\n\nInteraction analytics are collected automatically on published Premium experiences.")
+    await c.message.edit_text(analytics_text, reply_markup=kb([[InlineKeyboardButton(text="⬅️ Website Manager",callback_data=f"manage:{slug}")]]))
     await c.answer()
 
 @dp.callback_query(F.data.startswith("share:"))

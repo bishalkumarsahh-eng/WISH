@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from html import escape
 from urllib.parse import quote
 import httpx
@@ -54,7 +54,9 @@ def is_preview_valid(site, token):
     if not token or site.get("preview_token") != token:
         return False
     expires = as_utc(site.get("preview_expires_at"))
-    return bool(expires and expires > datetime.now(timezone.utc))
+    # A preview timer starts on the first successful open, not when the
+    # preview link is generated. This gives the creator a full 2 minutes.
+    return expires is None or expires > datetime.now(timezone.utc)
 
 async def get_media_bytes(file_id):
     if not BOT_TOKEN:
@@ -78,6 +80,24 @@ async def authorized_site(slug, token=None):
     if token:
         if not is_preview_valid(site, token):
             raise HTTPException(403, "Invalid or expired preview")
+
+        # Activate the 2-minute preview window on first open. The conditional
+        # update prevents repeated requests from resetting the timer.
+        if site.get("preview_expires_at") is None:
+            now = datetime.now(timezone.utc)
+            expires = now + timedelta(minutes=2)
+            activated = await db.websites.update_one(
+                {"_id": site["_id"], "preview_token": token, "preview_expires_at": None},
+                {"$set": {"preview_activated_at": now, "preview_expires_at": expires}},
+            )
+            if activated.modified_count:
+                site["preview_activated_at"] = now
+                site["preview_expires_at"] = expires
+            else:
+                site = await db.websites.find_one({"_id": site["_id"]})
+
+        if not is_preview_valid(site, token):
+            raise HTTPException(403, "Preview expired — create a new preview to continue")
         return site
 
     if not site.get("published"):
@@ -108,7 +128,7 @@ async def site_video(slug: str, token: str | None = Query(default=None)):
     content, content_type = await get_media_bytes(file_id)
     return Response(content=content, media_type=content_type, headers={"Cache-Control": "public, max-age=3600"})
 
-def render_premium_story(site, preview=False, preview_token=None):
+def render_premium_story_legacy(site, preview=False, preview_token=None):
     import json
     cfg = PREMIUM_THEME_CONFIG.get(site.get("premium_theme") or site.get("theme"), PREMIUM_THEME_CONFIG["custom_cinematic"])
     scene = cfg.get("scene", "shooting_stars")
@@ -155,6 +175,128 @@ def render_premium_story(site, preview=False, preview_token=None):
     }
     for key, value in replacements.items():
         html = html.replace(key, value)
+    return HTMLResponse(html)
+
+
+# ===================== WISH EXPERIENCE 2.0 =====================
+async def _public_site_for_api(slug: str):
+    site = await db.websites.find_one({"slug": slug})
+    if not site:
+        raise HTTPException(404, "Website not found")
+    if not site.get("published"):
+        raise HTTPException(404, "Website not published")
+    if not site.get("is_permanent"):
+        expires = as_utc(site.get("published_expires_at"))
+        if not expires or expires <= datetime.now(timezone.utc):
+            raise HTTPException(410, "This website has expired")
+    return site
+
+@app.post("/api/site/{slug}/event")
+async def experience_event(slug: str, request: Request):
+    site = await _public_site_for_api(slug)
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+    event = str(payload.get("event", "interaction"))[:40].replace(".", "_").replace("$", "_")
+    visitor = str(payload.get("visitor_id", ""))[:80]
+    allowed = {"experience_opened", "chapter_intro", "chapter_choices", "chapter_reveal", "chapter_letter", "chapter_memories", "chapter_video", "chapter_finale", "surprise_opened", "letter_opened", "finale_unlocked", "shared", "fullscreen", "photo_opened", "guestbook_sent"}
+    if event not in allowed:
+        event = "interaction"
+    update = {"$inc": {f"event_counts.{event}": 1}, "$set": {"last_interaction_at": datetime.now(timezone.utc)}}
+    if visitor:
+        update["$set"]["last_visitor_id"] = visitor
+    await db.websites.update_one({"_id": site["_id"]}, update)
+    return {"ok": True}
+
+@app.post("/api/site/{slug}/reaction")
+async def experience_reaction(slug: str, request: Request):
+    site = await _public_site_for_api(slug)
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+    reaction = str(payload.get("reaction", "❤️"))
+    reaction_map = {"❤️":"heart", "🥹":"tears", "🎉":"party", "✨":"sparkle", "😍":"love"}
+    key = reaction_map.get(reaction, "heart")
+    await db.websites.update_one({"_id": site["_id"]}, {"$inc": {f"reaction_counts.{key}": 1}, "$set": {"last_reaction_at": datetime.now(timezone.utc)}})
+    return {"ok": True, "reaction": reaction}
+
+@app.post("/api/site/{slug}/guestbook")
+async def experience_guestbook(slug: str, request: Request):
+    site = await _public_site_for_api(slug)
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+    name = str(payload.get("name", "")).strip()[:40]
+    message = str(payload.get("message", "")).strip()[:300]
+    visitor = str(payload.get("visitor_id", "")).strip()[:80]
+    if not name or not message:
+        raise HTTPException(400, "Name and message are required")
+    now = datetime.now(timezone.utc)
+    if visitor:
+        recent = await db.guestbook.find_one({"slug": slug, "visitor_id": visitor, "created_at": {"$gte": now - timedelta(minutes=2)}})
+        if recent:
+            raise HTTPException(429, "Please wait before sending another message")
+    await db.guestbook.insert_one({"slug": slug, "website_id": site["_id"], "name": name, "message": message, "visitor_id": visitor or None, "created_at": now})
+    await db.websites.update_one({"_id": site["_id"]}, {"$inc": {"guestbook_count": 1}, "$set": {"last_guestbook_at": now}})
+    return {"ok": True}
+
+@app.get("/api/site/{slug}/public-stats")
+async def public_stats(slug: str):
+    site = await _public_site_for_api(slug)
+    return {"ok": True, "views": int(site.get("views", 0) or 0), "reactions": site.get("reaction_counts", {}), "guestbook": int(site.get("guestbook_count", 0) or 0)}
+
+def render_premium_story(site, preview=False, preview_token=None):
+    """Experience 2.0 compatibility layer over the existing premium renderer."""
+    response = render_premium_story_legacy(site, preview, preview_token)
+    html = response.body.decode("utf-8")
+    slug = escape(str(site.get("slug", "")))
+    api_enabled = "false" if preview else "true"
+    guestbook_enabled = "true" if "guestbook" in set(site.get("extras", [])) else "false"
+    recipient = escape(str(site.get("recipient_name") or "You"))
+    gate_cfg = PREMIUM_THEME_CONFIG.get(site.get("premium_theme") or site.get("theme"), {})
+    gate_icon = escape(str(gate_cfg.get("emoji") or "✨"))
+    overlay = f"""<style>
+#wx-gate{{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,var(--accent,#ff8fb9),transparent 28%),#070510;transition:opacity .7s ease,visibility .7s}}
+#wx-gate.hide{{opacity:0;visibility:hidden;pointer-events:none}}
+.wx-gate-card{{width:min(560px,90vw);padding:42px 28px;text-align:center;border:1px solid #ffffff28;border-radius:32px;background:#ffffff10;backdrop-filter:blur(24px);box-shadow:0 30px 100px #0009}}
+.wx-gate-card .wx-orb{{font-size:72px;filter:drop-shadow(0 0 30px var(--accent,#ff8fb9));animation:wxPulse 2.4s ease-in-out infinite}}
+.wx-gate-card h2{{margin:8px 0;font-size:clamp(28px,7vw,52px)}} .wx-gate-card p{{opacity:.75;line-height:1.7}}
+#wx-enter{{border:0;border-radius:999px;padding:16px 28px;font-weight:900;font-size:16px;cursor:pointer;background:linear-gradient(135deg,#fff,var(--accent,#ff8fb9));color:#151018;box-shadow:0 15px 45px #0006}}
+@keyframes wxPulse{{50%{{transform:scale(1.08) rotate(3deg)}}}}
+#wx-progress{{position:fixed;z-index:9998;top:0;left:0;width:100%;height:4px;background:#ffffff18;pointer-events:none}} #wx-progress span{{display:block;width:0;height:100%;background:var(--accent,#ff8fb9);box-shadow:0 0 15px var(--accent,#ff8fb9);transition:width .35s ease}}
+#wx-tools{{position:fixed;right:14px;bottom:14px;z-index:9997;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}} .wx-tool{{border:1px solid #ffffff2a;border-radius:999px;padding:11px 14px;background:#090711b8;color:#fff;backdrop-filter:blur(14px);cursor:pointer;font-weight:800;box-shadow:0 8px 30px #0005}}
+#wx-toast{{position:fixed;left:50%;bottom:76px;transform:translate(-50%,20px);z-index:10000;padding:12px 17px;border-radius:999px;background:#090711e8;border:1px solid #ffffff24;opacity:0;pointer-events:none;transition:.3s;white-space:nowrap}} #wx-toast.show{{opacity:1;transform:translate(-50%,0)}}
+.wx-lightbox{{position:fixed;inset:0;z-index:10001;display:none;place-items:center;background:#000d;padding:20px}} .wx-lightbox.open{{display:grid}} .wx-lightbox img{{max-width:94vw;max-height:88vh;border-radius:22px;box-shadow:0 30px 100px #000}} .wx-lightbox button{{position:absolute;top:18px;right:18px;border:0;border-radius:50%;width:46px;height:46px;font-size:22px;cursor:pointer}}
+.wx-spark{{position:fixed;width:5px;height:5px;border-radius:50%;background:#fff;box-shadow:0 0 15px var(--accent,#fff);z-index:9996;pointer-events:none;animation:wxSpark .8s ease-out forwards}} @keyframes wxSpark{{to{{transform:translate(var(--dx),var(--dy)) scale(0);opacity:0}}}}
+@media(prefers-reduced-motion:reduce){{*,*::before,*::after{{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}}}}
+</style>
+<div id="wx-gate"><div class="wx-gate-card"><div class="wx-orb">{gate_icon}</div><div style="letter-spacing:.16em;text-transform:uppercase;font-size:11px;opacity:.65">A PRIVATE MOMENT FOR</div><h2>{recipient}</h2><p>This isn't just a webpage. It's a little experience made especially for you.</p><button id="wx-enter">ENTER THE EXPERIENCE ✨</button></div></div>
+<div id="wx-progress"><span></span></div><div id="wx-tools"><button class="wx-tool" id="wx-share">↗ Share</button><button class="wx-tool" id="wx-full">⛶ Fullscreen</button><button class="wx-tool" id="wx-replay">↻ Replay</button></div>
+<div id="wx-toast"></div><div class="wx-lightbox" id="wx-lightbox"><button id="wx-close">×</button><img id="wx-lightbox-img" alt="Memory"></div>
+<script>
+(()=>{{const slug='{slug}',apiEnabled={api_enabled},guestbookEnabled={guestbook_enabled};
+const visitor=(localStorage.getItem('wish_visitor')||((crypto.randomUUID)?crypto.randomUUID():String(Date.now())+Math.random()));localStorage.setItem('wish_visitor',visitor);
+const gate=document.getElementById('wx-gate'),toast=document.getElementById('wx-toast'),bar=document.querySelector('#wx-progress span'),screens=[...document.querySelectorAll('.screen')];
+function toastMsg(t){{toast.textContent=t;toast.classList.add('show');clearTimeout(window.__wt);window.__wt=setTimeout(()=>toast.classList.remove('show'),2200)}}
+function event(name){{if(!apiEnabled)return;fetch('/api/site/'+slug+'/event',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{event:name,visitor_id:visitor}})}}).catch(()=>{{}})}}
+function track(){{const active=document.querySelector('.screen.active');if(!active)return;const i=Math.max(0,screens.indexOf(active));bar.style.width=((i+1)/Math.max(1,screens.length)*100)+'%';event('chapter_'+active.id)}}
+function spark(x,y){{for(let i=0;i<7;i++){{const e=document.createElement('i');e.className='wx-spark';e.style.left=x+'px';e.style.top=y+'px';e.style.setProperty('--dx',(Math.random()*90-45)+'px');e.style.setProperty('--dy',(Math.random()*90-45)+'px');document.body.appendChild(e);setTimeout(()=>e.remove(),900)}}}}
+document.getElementById('wx-enter').onclick=()=>{{gate.classList.add('hide');event('experience_opened');track();toastMsg('✨ Experience unlocked')}};
+document.getElementById('wx-replay').onclick=()=>location.reload();
+document.getElementById('wx-full').onclick=()=>{{document.documentElement.requestFullscreen?.();event('fullscreen')}};
+document.getElementById('wx-share').onclick=async()=>{{try{{if(navigator.share){{await navigator.share({{title:document.title,text:'A special wish was made for you ✨',url:location.href}})}}else{{await navigator.clipboard.writeText(location.href)}}event('shared');toastMsg('🔗 Share link ready')}}catch(e){{}}}};
+document.addEventListener('click',e=>{{spark(e.clientX,e.clientY);if(e.target.closest('.btn,.option,.interactive-card'))setTimeout(track,60)}});
+const imgs=[...document.querySelectorAll('.gallery img,.gallery-grid img,.photo img')],lb=document.getElementById('wx-lightbox'),lbi=document.getElementById('wx-lightbox-img');imgs.forEach(img=>img.addEventListener('click',()=>{{lbi.src=img.src;lb.classList.add('open');event('photo_opened')}}));document.getElementById('wx-close').onclick=()=>lb.classList.remove('open');lb.onclick=e=>{{if(e.target===lb)lb.classList.remove('open')}};window.addEventListener('keydown',e=>{{if(e.key==='Escape')lb.classList.remove('open')}});
+setTimeout(()=>{{
+  if(window.reactSite){{const oldReact=window.reactSite;window.reactSite=async(r)=>{{if(apiEnabled)fetch('/api/site/'+slug+'/reaction',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{reaction:r,visitor_id:visitor}})}}).catch(()=>{{}});oldReact(r);}}}}
+  if(guestbookEnabled && window.sendGuestbook){{window.sendGuestbook=async()=>{{const n=document.getElementById('guestname')?.value.trim(),m=document.getElementById('guestmessage')?.value.trim(),status=document.getElementById('gueststatus');if(!n||!m){{if(status)status.textContent='Please write your name and message first.';return}}if(!apiEnabled){{if(status)status.textContent='Preview mode: guestbook is disabled.';return}}try{{const r=await fetch('/api/site/'+slug+'/guestbook',{{method:'POST',headers:{{'Content-Type':'application/json'}},body:JSON.stringify({{name:n,message:m,visitor_id:visitor}})}});const data=await r.json().catch(()=>({{}}));if(!r.ok)throw new Error(data.detail||'Unable to save');if(status)status.textContent='✨ Your beautiful message was saved!';event('guestbook_sent')}}catch(err){{if(status)status.textContent='⚠️ '+err.message}}}}}}
+}},0);
+}})();
+</script>"""
+    html = html.replace("<body>", "<body>" + overlay, 1)
     return HTMLResponse(html)
 
 def render_site(site, preview=False, preview_token=None):

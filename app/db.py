@@ -21,3 +21,5 @@ async def setup_indexes():
     await db.users.create_index("telegram_id", unique=True)
     await db.payments.create_index("payload", unique=True)
     await db.payments.create_index("telegram_payment_charge_id", unique=True, sparse=True)
+    await db.guestbook.create_index([("slug", 1), ("created_at", -1)])
+    await db.guestbook.create_index([("slug", 1), ("visitor_id", 1), ("created_at", -1)])
