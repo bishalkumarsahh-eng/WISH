@@ -29,6 +29,11 @@ async def log_event(bot, text):
     except Exception:
         log.exception("Failed to send logger message")
 
+def user_log_details(user):
+    username = f"@{user.username}" if getattr(user, "username", None) else "No username"
+    full_name = (getattr(user, "full_name", None) or "Unknown").replace("<", "&lt;").replace(">", "&gt;")
+    return f"👤 Name: <b>{full_name}</b>\n🔗 Username: {username}\n🆔 User ID: <code>{user.id}</code>"
+
 
 def as_utc(value):
     if value is None:
@@ -591,6 +596,17 @@ async def choose_publish_plan(c, bot):
         "created_at": datetime.now(timezone.utc)
     })
 
+    await log_event(
+        bot,
+        "💳 <b>PAYMENT STARTED</b>\n\n"
+        f"{user_log_details(c.from_user)}\n"
+        f"📦 Package: <b>{site.get('package', 'simple').title()}</b>\n"
+        f"⭐ Stars: <b>{plan['stars']} ⭐</b>\n"
+        f"⏳ Plan: <b>{plan['label']}</b>\n"
+        f"🎨 Website: <code>{slug}</code>\n"
+        f"🔗 Preview: {BASE_URL}/preview/{slug}"
+    )
+
     description = (
         "Keep your WishVerse website live permanently"
         if plan["hours"] is None
@@ -611,6 +627,18 @@ async def choose_publish_plan(c, bot):
 async def checkout(q, bot):
     p = await db.payments.find_one({"payload": q.invoice_payload, "status": "pending"})
     ok = bool(p and p["user_id"] == q.from_user.id and p["amount"] == q.total_amount)
+    if ok:
+        await log_event(
+            bot,
+            "🧾 <b>PAYMENT CHECKOUT CONFIRMED</b>\n\n"
+            f"{user_log_details(q.from_user)}\n"
+            f"⭐ Amount: <b>{q.total_amount} ⭐</b>\n"
+            f"🎨 Website: <code>{p.get('website_slug')}</code>\n"
+            f"📦 Package: <b>{p.get('package', 'simple').title()}</b>\n"
+            f"⏳ Plan: <b>{p.get('plan')}</b>"
+        )
+    else:
+        await log_event(bot, f"⚠️ <b>INVALID PAYMENT CHECKOUT</b>\n\n{user_log_details(q.from_user)}\n⭐ Amount: <b>{q.total_amount} ⭐</b>")
     await bot.answer_pre_checkout_query(q.id, ok=ok, error_message=None if ok else "Invalid or expired payment.")
 
 @dp.message(F.successful_payment)
@@ -661,7 +689,19 @@ async def successful(m):
 
     duration = "permanently 👑" if plan["hours"] is None else f"for {plan['hours']} hours ⏳"
     await m.answer(f"🎉 <b>Payment successful — your website is LIVE {duration}!</b>\n\n🌐 {BASE_URL}/s/{p['website_slug']}")
-    await log_event(m.bot, f"⭐ <b>PAYMENT SUCCESS</b>\n👤 User: <code>{m.from_user.id}</code>\n📦 Package: {p.get('package', 'simple').title()}\n⭐ Stars: {p['amount']}\n⏳ Plan: {p['plan']}\n🌐 {BASE_URL}/s/{p['website_slug']}")
+    expiry_text = "Never expires (Permanent)" if expires_at is None else expires_at.strftime("%d %b %Y • %H:%M UTC")
+    await log_event(
+        m.bot,
+        "✅ <b>PAYMENT SUCCESSFUL — WEBSITE PUBLISHED</b>\n\n"
+        f"{user_log_details(m.from_user)}\n"
+        f"📦 Package: <b>{p.get('package', 'simple').title()}</b>\n"
+        f"⭐ Paid: <b>{p['amount']} Stars</b>\n"
+        f"⏳ Plan: <b>{p['plan']}</b>\n"
+        f"⌛ Expires: <b>{expiry_text}</b>\n"
+        f"🎨 Website ID: <code>{p['website_slug']}</code>\n"
+        f"🌐 Live: {BASE_URL}/s/{p['website_slug']}\n"
+        f"🧾 Telegram Charge: <code>{info.telegram_payment_charge_id}</code>"
+    )
 
 @dp.message(Command("grantfree"))
 async def grantfree(m):
