@@ -6,3 +6,4 @@ MONGO_URI = os.getenv("MONGO_URI", "").strip()
 BASE_URL = os.getenv("BASE_URL", "").rstrip("/")
 SECRET_KEY = os.getenv("SECRET_KEY", "").strip() or "development-secret-change-me"
 PREVIEW_MINUTES = int(os.getenv("PREVIEW_MINUTES", "2"))
+LOG_GROUP_ID = int(os.getenv("LOG_GROUP_ID", "0") or 0)

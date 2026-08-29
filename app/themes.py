@@ -48,3 +48,18 @@ PREMIUM_THEME_CONFIG = {
     "festival_lights": {"name":"✨ Festival Lights","category":"festival","accent":"#ffe36e","bg":"linear-gradient(135deg,#171229,#42304d,#725d2c)","emoji":"✨"},
     "custom_cinematic": {"name":"🎬 Cinematic Story","category":"custom","accent":"#9f7cff","bg":"linear-gradient(135deg,#07051a,#22134a,#381f65)","emoji":"🎬"},
 }
+
+
+# Premium pages use a distinct animated scene layer, not only stars.
+PREMIUM_SCENE_MAP = {
+    "birthday_cake":"balloons", "birthday_party":"party", "birthday_stars":"shooting_stars",
+    "valentine_rose":"rose_petals", "valentine_neon":"neon_hearts", "valentine_stars":"romantic_sky",
+    "anniversary_gold":"golden_sparkles", "anniversary_memory":"polaroid_glow",
+    "friendship_besties":"bubbles", "friendship_crazy":"confetti_party",
+    "congrats_victory":"golden_sparkles", "congrats_fireworks":"fireworks",
+    "surprise_mystery":"mystic_fog", "surprise_magic":"magic_portal",
+    "festival_lantern":"lanterns", "festival_lights":"fairy_lights",
+    "custom_cinematic":"cinematic_aurora",
+}
+for _key, _cfg in PREMIUM_THEME_CONFIG.items():
+    _cfg.setdefault("scene", PREMIUM_SCENE_MAP.get(_key, "shooting_stars"))

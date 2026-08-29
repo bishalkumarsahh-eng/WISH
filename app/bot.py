@@ -11,7 +11,7 @@ from aiogram.types import (
     InlineKeyboardButton, LabeledPrice, PreCheckoutQuery
 )
 
-from .config import BOT_TOKEN, OWNER_ID, BASE_URL, PREVIEW_MINUTES
+from .config import BOT_TOKEN, OWNER_ID, BASE_URL, PREVIEW_MINUTES, LOG_GROUP_ID
 from .db import db, setup_indexes
 from .themes import THEMES, PREMIUM_THEME_CONFIG
 
@@ -20,6 +20,15 @@ dp = Dispatcher()
 
 def is_owner(uid):
     return bool(OWNER_ID and uid == OWNER_ID)
+
+async def log_event(bot, text):
+    if not LOG_GROUP_ID:
+        return
+    try:
+        await bot.send_message(LOG_GROUP_ID, text)
+    except Exception:
+        log.exception("Failed to send logger message")
+
 
 def as_utc(value):
     if value is None:
@@ -526,6 +535,7 @@ async def publish(c, bot):
             }}
         )
         await c.message.answer(f"👑🎉 <b>Published for FREE — permanently!</b>\n\n🌐 {BASE_URL}/s/{slug}")
+        await log_event(bot, f"🆓 <b>FREE PUBLISH</b>\n👤 User: <code>{c.from_user.id}</code>\n🌐 {BASE_URL}/s/{slug}\n📦 Package: {site.get('package', 'simple')}")
         return await c.answer()
 
     plans = plans_for(site)
@@ -566,6 +576,7 @@ async def choose_publish_plan(c, bot):
             }}
         )
         await c.message.answer(f"👑🎉 <b>Published for FREE — permanently!</b>\n\n🌐 {BASE_URL}/s/{slug}")
+        await log_event(bot, f"🆓 <b>FREE PUBLISH</b>\n👤 User: <code>{c.from_user.id}</code>\n🌐 {BASE_URL}/s/{slug}\n📦 Package: {site.get('package', 'simple')}")
         return await c.answer()
 
     payload = f"wishverse:{slug}:{c.from_user.id}:{plan_id}:{secrets.token_urlsafe(12)}"
@@ -650,28 +661,41 @@ async def successful(m):
 
     duration = "permanently 👑" if plan["hours"] is None else f"for {plan['hours']} hours ⏳"
     await m.answer(f"🎉 <b>Payment successful — your website is LIVE {duration}!</b>\n\n🌐 {BASE_URL}/s/{p['website_slug']}")
+    await log_event(m.bot, f"⭐ <b>PAYMENT SUCCESS</b>\n👤 User: <code>{m.from_user.id}</code>\n📦 Package: {p.get('package', 'simple').title()}\n⭐ Stars: {p['amount']}\n⏳ Plan: {p['plan']}\n🌐 {BASE_URL}/s/{p['website_slug']}")
 
 @dp.message(Command("grantfree"))
 async def grantfree(m):
     if not is_owner(m.from_user.id):
-        return
+        return await m.answer("⛔ Owner only command.")
     parts = m.text.split()
     if len(parts) != 2 or not parts[1].isdigit():
         return await m.answer("Usage: /grantfree USER_ID")
     uid = int(parts[1])
     await db.users.update_one({"telegram_id": uid}, {"$set": {"free_access": True}}, upsert=True)
     await m.answer(f"✅ Free permanent publishing granted to <code>{uid}</code>.")
+    await log_event(m.bot, f"👑 <b>FREE ACCESS GRANTED</b>\n👤 User ID: <code>{uid}</code>\n🛠 By owner: <code>{m.from_user.id}</code>")
 
 @dp.message(Command("revokefree"))
 async def revokefree(m):
     if not is_owner(m.from_user.id):
-        return
+        return await m.answer("⛔ Owner only command.")
     parts = m.text.split()
     if len(parts) != 2 or not parts[1].isdigit():
         return await m.answer("Usage: /revokefree USER_ID")
     uid = int(parts[1])
     await db.users.update_one({"telegram_id": uid}, {"$set": {"free_access": False}}, upsert=True)
     await m.answer(f"❌ Free publishing removed from <code>{uid}</code>.")
+    await log_event(m.bot, f"🚫 <b>FREE ACCESS REVOKED</b>\n👤 User ID: <code>{uid}</code>\n🛠 By owner: <code>{m.from_user.id}</code>")
+
+@dp.message(Command("freeusers"))
+async def freeusers(m):
+    if not is_owner(m.from_user.id):
+        return await m.answer("⛔ Owner only command.")
+    docs = await db.users.find({"free_access": True}).limit(50).to_list(length=50)
+    if not docs:
+        return await m.answer("No users currently have free publishing access.")
+    text = "👑 <b>Free Publishing Users</b>\n\n" + "\n".join(f"• <code>{d.get('telegram_id')}</code>" for d in docs)
+    await m.answer(text)
 
 async def run_bot():
     if not BOT_TOKEN:
