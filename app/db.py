@@ -14,7 +14,7 @@ db = client["wishverse"] if client else None
 async def setup_indexes():
     if db is None:
         raise RuntimeError("MONGO_URI is missing")
-    await db.websites.create_index("slug", unique=True)
+    await db.websites.create_index("slug", unique=True, sparse=True)
     await db.websites.create_index("owner_id")
     await db.websites.create_index([("owner_id", 1), ("views", -1)])
     await db.websites.create_index("preview_token", unique=True, sparse=True)
