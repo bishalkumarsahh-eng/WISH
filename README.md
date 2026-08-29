@@ -62,3 +62,24 @@ This release fixes the preview/public website 500 error caused by MongoDB dateti
 - Multiple interactive experiences
 - Reveal surprise, secret letter and celebration effect
 - Rich gallery and premium media presentation
+
+
+## Publish fix
+This version fixes false "Website not found" errors when pressing Publish by:
+- Looking up the website by slug first
+- Checking ownership separately
+- Supporting timezone-safe publish expiry checks
+- Verifying the website update after a successful Telegram Stars payment
+
+
+## Premium Interactive Theme Experience
+Premium users now choose a complete website experience:
+- Midnight Universe
+- Luxury Birthday
+- Romantic Love Story
+- Soft Aesthetic
+- Royal Luxury
+- Party Celebration
+- Memory Journey
+
+Premium pages include an interactive journey structure with surprise cards, secret letter, make-a-wish interaction, clickable stars and cinematic finale. Normal package remains unchanged.
