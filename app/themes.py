@@ -27,3 +27,40 @@ CATEGORY_ICONS = {
     "birthday":"🎂", "valentine":"❤️", "anniversary":"💍", "friendship":"👫",
     "congratulations":"🎉", "surprise":"🎁", "festival":"✨", "custom":"🌟"
 }
+
+
+# Premium cinematic themes. These are separate from the normal theme catalog so
+# premium users can choose a theme designed specifically for their occasion.
+PREMIUM_THEMES = {
+    # Birthday
+    "birthday_cake": {"name":"🎂 Luxury Cake Story","category":"birthday","accent":"#ff8aa5","bg":"linear-gradient(145deg,#2a0715,#6d1635,#ff7b9a)","effect":"confetti"},
+    "birthday_party": {"name":"🎆 Neon Birthday Party","category":"birthday","accent":"#ffd36a","bg":"linear-gradient(145deg,#090025,#3c1268,#ef397e)","effect":"fireworks"},
+    "birthday_starry": {"name":"🌌 Birthday Under Stars","category":"birthday","accent":"#9fc7ff","bg":"linear-gradient(180deg,#020617,#12224d,#2a124d)","effect":"stars"},
+    "birthday_soft": {"name":"🧁 Soft Pastel Birthday","category":"birthday","accent":"#ff7da7","bg":"linear-gradient(145deg,#ffd4df,#cdbdff,#a8e8ff)","effect":"bubbles"},
+    # Valentine
+    "valentine_rose": {"name":"🌹 Rose Love Story","category":"valentine","accent":"#ff6f9f","bg":"linear-gradient(145deg,#18030b,#63162e,#23051c)","effect":"petals"},
+    "valentine_neon": {"name":"💖 Neon Love Night","category":"valentine","accent":"#ff58bd","bg":"radial-gradient(circle at top,#5d174b,#140523 60%,#020207)","effect":"hearts"},
+    "valentine_stars": {"name":"🌙 Starlit Romance","category":"valentine","accent":"#ffd6ec","bg":"linear-gradient(180deg,#05091e,#1c123b,#461329)","effect":"stars"},
+    "valentine_luxury": {"name":"💎 Black Rose Luxury","category":"valentine","accent":"#f5b1c9","bg":"linear-gradient(145deg,#050505,#2a0715,#08030b)","effect":"sparkles"},
+    # Anniversary
+    "anniversary_gold": {"name":"🥂 Golden Anniversary","category":"anniversary","accent":"#ffd36a","bg":"linear-gradient(145deg,#120c02,#493000,#150a02)","effect":"gold"},
+    "anniversary_memory": {"name":"📖 Our Memory Journey","category":"anniversary","accent":"#f4c9ff","bg":"linear-gradient(145deg,#180d28,#40235d,#1a0f26)","effect":"stars"},
+    "anniversary_roses": {"name":"🌹 Forever & Always","category":"anniversary","accent":"#ff9bbd","bg":"linear-gradient(145deg,#25020b,#5a1532,#1a0710)","effect":"petals"},
+    # Friendship
+    "friendship_fun": {"name":"🫶 Besties Forever","category":"friendship","accent":"#7be7ff","bg":"linear-gradient(145deg,#132052,#3c1673,#ff5d91)","effect":"confetti"},
+    "friendship_memory": {"name":"📸 Crazy Memories","category":"friendship","accent":"#ffd978","bg":"linear-gradient(145deg,#17384d,#4c296b,#f56f88)","effect":"sparkles"},
+    "friendship_night": {"name":"🌃 Late Night Besties","category":"friendship","accent":"#a9baff","bg":"linear-gradient(180deg,#03061a,#101c4b,#271344)","effect":"stars"},
+    # Congratulations
+    "congrats_gold": {"name":"🏆 Golden Victory","category":"congratulations","accent":"#ffd15c","bg":"linear-gradient(145deg,#090702,#4c3300,#130b03)","effect":"gold"},
+    "congrats_fireworks": {"name":"🎇 Victory Fireworks","category":"congratulations","accent":"#ff8de1","bg":"linear-gradient(145deg,#05051a,#221050,#4b093f)","effect":"fireworks"},
+    # Surprise
+    "surprise_mystery": {"name":"🎁 Mystery Reveal","category":"surprise","accent":"#b98cff","bg":"radial-gradient(circle at top,#311759,#10061e,#03030a)","effect":"stars"},
+    "surprise_magic": {"name":"✨ Magical Portal","category":"surprise","accent":"#7bffe2","bg":"linear-gradient(145deg,#021b28,#0d3c4a,#27134d)","effect":"sparkles"},
+    # Festival
+    "festival_lantern": {"name":"🏮 Festival Lanterns","category":"festival","accent":"#ffb45f","bg":"linear-gradient(180deg,#1b061c,#57152a,#1b0717)","effect":"lanterns"},
+    "festival_lights": {"name":"✨ Festival Lights","category":"festival","accent":"#ffe07d","bg":"linear-gradient(145deg,#10102b,#2f1650,#103548)","effect":"lights"},
+    # Custom / universal
+    "custom_universe": {"name":"🌌 Midnight Universe","category":"all","accent":"#9f7cff","bg":"linear-gradient(180deg,#03061a,#07133b,#160b34)","effect":"stars"},
+    "custom_royal": {"name":"👑 Royal Luxury","category":"all","accent":"#ffd36a","bg":"radial-gradient(circle at top,#563307,#160b03 58%,#050302)","effect":"gold"},
+    "custom_cinematic": {"name":"🎬 Cinematic Story","category":"all","accent":"#7be7ff","bg":"linear-gradient(145deg,#030714,#172654,#260f43)","effect":"sparkles"},
+}

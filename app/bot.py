@@ -13,7 +13,7 @@ from aiogram.types import (
 
 from .config import BOT_TOKEN, OWNER_ID, BASE_URL, PREVIEW_MINUTES
 from .db import db, setup_indexes
-from .themes import THEMES
+from .themes import THEMES, PREMIUM_THEMES
 
 log = logging.getLogger(__name__)
 dp = Dispatcher()
@@ -124,16 +124,15 @@ def font_menu(package, kind="title"):
 def finish_photos_menu():
     return kb([[InlineKeyboardButton(text="✅ Done Adding Photos", callback_data="media:photos_done")]])
 
-def premium_theme_menu():
-    return kb([
-        [InlineKeyboardButton(text="🌌 Midnight Universe", callback_data="ptheme:universe")],
-        [InlineKeyboardButton(text="🎂 Luxury Birthday", callback_data="ptheme:luxury_birthday")],
-        [InlineKeyboardButton(text="💖 Romantic Love Story", callback_data="ptheme:romantic")],
-        [InlineKeyboardButton(text="🌸 Soft Aesthetic", callback_data="ptheme:soft")],
-        [InlineKeyboardButton(text="👑 Royal Luxury", callback_data="ptheme:royal")],
-        [InlineKeyboardButton(text="🎆 Party Celebration", callback_data="ptheme:party")],
-        [InlineKeyboardButton(text="🌙 Memory Journey", callback_data="ptheme:memory")],
-    ])
+def premium_theme_menu(category):
+    # Show premium themes made for the selected occasion, plus universal themes.
+    items = [(key, value) for key, value in PREMIUM_THEMES.items()
+             if value.get("category") in (category, "all")]
+    rows = []
+    for i in range(0, len(items), 2):
+        rows.append([InlineKeyboardButton(text=v["name"], callback_data=f"ptheme:{k}") for k, v in items[i:i+2]])
+    rows.append([InlineKeyboardButton(text="🔙 Change Package", callback_data="categories")])
+    return kb(rows)
 
 def normal_extras_menu():
     return kb([
@@ -248,22 +247,16 @@ async def choose_premium_theme(c):
         return await c.answer("Please start again.", show_alert=True)
 
     theme = c.data.split(":", 1)[1]
-    labels = {
-        "universe": "🌌 Midnight Universe",
-        "luxury_birthday": "🎂 Luxury Birthday",
-        "romantic": "💖 Romantic Love Story",
-        "soft": "🌸 Soft Aesthetic",
-        "royal": "👑 Royal Luxury",
-        "party": "🎆 Party Celebration",
-        "memory": "🌙 Memory Journey",
-    }
+    premium = PREMIUM_THEMES.get(theme)
+    if not premium:
+        return await c.answer("Premium theme not found.", show_alert=True)
     draft["premium_theme"] = theme
     draft["theme"] = theme
     draft["step"] = "title"
     await save_draft(c.from_user.id, draft)
 
     await c.message.edit_text(
-        f"✨ <b>{labels.get(theme, 'Premium')}</b> selected!\n\n"
+        f"✨ <b>{premium['name']}</b> selected!\n\n"
         "This premium website will be built as an interactive journey with cinematic sections.\n\n"
         "✍️ Now send the <b>main title</b>."
     )
@@ -294,6 +287,16 @@ async def choose_package(c):
     if not draft:
         return await c.answer("Please start creating again.", show_alert=True)
     draft["package"] = package
+    if package == "premium":
+        draft["step"] = "premium_theme"
+        await save_draft(c.from_user.id, draft)
+        await c.message.edit_text(
+            "💎 <b>Choose your Premium Cinematic Theme</b>\n\n"
+            "These themes are built specially for this occasion and will create a complete interactive journey.",
+            reply_markup=premium_theme_menu(draft.get("type", "custom"))
+        )
+        return await c.answer()
+
     draft["step"] = "title_font"
     await save_draft(c.from_user.id, draft)
 
