@@ -271,7 +271,10 @@ async def get_draft(uid):
 async def save_draft(uid, draft):
     await db.users.update_one({"telegram_id": uid}, {"$set": {"draft": draft}}, upsert=True)
 
-async def create_site_from_draft(message, draft):
+async def create_site_from_draft(message, draft, owner_id=None):
+    # For callback queries, message.from_user is the BOT, not the human user.
+    # Always allow the caller to explicitly pass the real Telegram user ID.
+    real_owner_id = int(owner_id if owner_id is not None else message.from_user.id)
     slug = secrets.token_urlsafe(8).replace("-", "").replace("_", "")
     token = secrets.token_urlsafe(24)
     # The 2-minute preview countdown starts when the preview link is first opened.
@@ -281,7 +284,7 @@ async def create_site_from_draft(message, draft):
         "slug": slug,
         "preview_token": token,
         "preview_expires_at": expires,
-        "owner_id": message.from_user.id,
+        "owner_id": real_owner_id,
         "type": draft.get("type"),
         "theme": draft.get("theme", "starry_night"),
         "opening_style": draft.get("opening_style", "elegant"),
@@ -308,7 +311,7 @@ async def create_site_from_draft(message, draft):
         "created_at": datetime.now(timezone.utc),
     }
     await db.websites.insert_one(site)
-    await db.users.update_one({"telegram_id": message.from_user.id}, {"$unset": {"draft": ""}})
+    await db.users.update_one({"telegram_id": real_owner_id}, {"$unset": {"draft": ""}})
 
     url = f"{BASE_URL}/preview/{slug}?token={token}"
     media_text = (
@@ -322,10 +325,11 @@ async def create_site_from_draft(message, draft):
         f"🎉 <b>Your professional website is ready!</b>\n\n"
         f"{media_text}\n"
         f"🔤 Font: <b>{(PREMIUM_FONTS if site['package']=='premium' else SIMPLE_FONTS).get(site.get('title_font', 'inter'), ('Modern','Inter'))[0]}</b>\n\n"
-        f"👀 Preview is private and stays active for <b>{PREVIEW_SECONDS} seconds after first opening</b>.\n"
+        f"👀 Preview is private and stays active for <b>{PREVIEW_SECONDS // 60 if PREVIEW_SECONDS % 60 == 0 else PREVIEW_SECONDS} {'minutes' if PREVIEW_SECONDS % 60 == 0 else 'seconds'} after first opening</b>.\n"
         f"🌐 Public sharing unlocks only after publishing.",
         reply_markup=kb([
-            [InlineKeyboardButton(text="👀 Open Preview • 30 sec", url=url)],
+            [InlineKeyboardButton(text=f"👀 Open Preview • {PREVIEW_SECONDS // 60} min" if PREVIEW_SECONDS % 60 == 0 else f"👀 Open Preview • {PREVIEW_SECONDS} sec", url=url)],
+            [InlineKeyboardButton(text="🔄 Generate Fresh Preview", callback_data=f"refreshpreview:{slug}")],
             [InlineKeyboardButton(text="🚀 Publish Website", callback_data=f"publish:{slug}")]
         ])
     )
@@ -619,7 +623,7 @@ async def photos_done(c):
         return await c.answer()
 
     await c.answer()
-    await create_site_from_draft(c.message, draft)
+    await create_site_from_draft(c.message, draft, owner_id=c.from_user.id)
 
 @dp.callback_query(F.data == "mywebsites")
 async def my_websites(c):
@@ -791,6 +795,35 @@ async def collect(m):
 
     if step == "audio" and m.text.strip().lower() == "skip":
         return await create_site_from_draft(m, draft)
+
+
+@dp.callback_query(F.data.startswith("refreshpreview:"))
+async def refresh_preview(c, bot):
+    slug = c.data.split(":", 1)[1]
+    site, site_error = await get_owned_site(slug, c.from_user.id)
+    if not site:
+        message = "Website not found." if site_error == "missing" else "This website belongs to another user."
+        return await c.answer(message, show_alert=True)
+
+    token = secrets.token_urlsafe(24)
+    await db.websites.update_one(
+        {"_id": site["_id"]},
+        {"$set": {
+            "preview_token": token,
+            "preview_expires_at": None,
+            "preview_activated_at": None,
+        }}
+    )
+    url = f"{BASE_URL}/preview/{slug}?token={token}"
+    await c.message.answer(
+        f"🔄 <b>Fresh preview created!</b>\n\n"
+        f"⏳ You get a full <b>{PREVIEW_SECONDS // 60 if PREVIEW_SECONDS % 60 == 0 else PREVIEW_SECONDS} {'minutes' if PREVIEW_SECONDS % 60 == 0 else 'seconds'}</b> after the first successful opening.\n\n"
+        f"Old preview links are no longer valid.",
+        reply_markup=kb([[InlineKeyboardButton(text="👀 Open Fresh Preview", url=url)],
+                         [InlineKeyboardButton(text="🚀 Publish Website", callback_data=f"publish:{slug}")]])
+    )
+    await log_event(bot, f"🔄 <b>PREVIEW REFRESHED</b>\n👤 User: <code>{c.from_user.id}</code>\n🌐 Website: <code>{slug}</code>")
+    await c.answer("Fresh preview generated!", show_alert=True)
 
 @dp.callback_query(F.data.startswith("publish:"))
 async def publish(c, bot):
