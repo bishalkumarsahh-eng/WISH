@@ -417,6 +417,16 @@ def render_site(site, preview=False, preview_token=None):
             f"<video controls playsinline preload='metadata' src='/media/{site['slug']}/video{media_suffix}'></video></section>"
         )
 
+    # Optional background music for normal sites.
+    # Define this here so the HTML template never references an undefined variable.
+    song_html = ""
+    if site.get("song_file_id"):
+        audio_url = f"/media/{site['slug']}/audio{media_suffix}"
+        song_html = (
+            f"<audio id='wx-song' preload='auto' loop autoplay playsinline "
+            f"src='{audio_url}'></audio>"
+        )
+
     preview_banner = "<div class='preview-banner'>🔒 PRIVATE 30-SECOND PREVIEW — NOT PUBLISHED</div>" if preview else ""
     recipient = f"<div class='to'>For {name} ✨</div>" if name else ""
 
