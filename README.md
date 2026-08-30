@@ -41,7 +41,7 @@
 - `MONGO_URI`
 - `BASE_URL` — full Heroku domain, for example `https://your-app.herokuapp.com`
 - `SECRET_KEY`
-- `PREVIEW_MINUTES=2`
+- `PREVIEW_SECONDS=30`
 
 ## Telegram Stars
 Payments use Telegram Stars with currency `XTR`. `provider_token` is intentionally empty for Stars. A website is published only after Telegram sends a verified `successful_payment` update and the payload/amount/user are checked.
